@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useGameStore } from '../../stores/gameStore';
 import { isCyrillicLetter } from '../../utils/validators';
+import { Check } from 'lucide-react';
 
 export function LetterInput() {
   const turn = useGameStore((s) => s.turn);
@@ -54,7 +55,7 @@ export function LetterInput() {
           disabled={!turn.pendingLetter}
           className={`
             flex-1 py-3 rounded-xl font-bold text-lg uppercase tracking-wide
-            transition-all duration-200 active:scale-95
+            transition-all duration-200 active:scale-95 flex items-center justify-center gap-2
             ${
               turn.pendingLetter
                 ? 'bg-success hover:bg-success/80 text-white shadow-[0_0_15px_rgba(0,210,106,0.3)] cursor-pointer'
@@ -62,7 +63,7 @@ export function LetterInput() {
             }
           `}
         >
-          ✓ Назвать букву
+          <Check className="w-5 h-5" /> Назвать букву
         </button>
       </div>
       <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Enter — подтвердить</p>
