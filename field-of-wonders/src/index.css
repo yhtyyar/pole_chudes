@@ -22,7 +22,16 @@
   --cell-open-border:   #3b82f6;
   --cell-open-text:     #ffffff;
 
-  /* Scrollbar */
+  /* Drum sectors */
+  --drum-points: #3b82f6;
+  --drum-points-alt: #84cc16;
+  --drum-points-high: #f59e0b;
+  --drum-points-max: #fbbf24;
+  --drum-double: #14b8a6;
+  --drum-extra: #06b6d4;
+  --drum-bankrupt: #ef4444;
+  --drum-prize: #f5c542;
+  --drum-bank: #10b981;
   --scrollbar-track: rgba(255,255,255,0.05);
   --scrollbar-thumb: rgba(255,255,255,0.15);
   --scrollbar-thumb-hover: rgba(255,255,255,0.25);
@@ -33,7 +42,7 @@
   --color-panel:      #dce4f0;
   --color-card:       #c8d4e8;
   --color-text:       #1a1a2e;
-  --color-text-muted: rgba(26,26,46,0.5);
+  --color-text-muted: rgba(26,26,46,0.65);
   --color-border:     rgba(26,26,46,0.12);
 
   /* Board cells — ivory/gloss for closed, blue for open */
@@ -43,6 +52,17 @@
   --cell-open-bg:       #1d4ed8;
   --cell-open-border:   #3b82f6;
   --cell-open-text:     #ffffff;
+
+  /* Drum sectors */
+  --drum-points: #2563eb;
+  --drum-points-alt: #65a30d;
+  --drum-points-high: #d97706;
+  --drum-points-max: #d97706;
+  --drum-double: #0d9488;
+  --drum-extra: #0891b2;
+  --drum-bankrupt: #dc2626;
+  --drum-prize: #d97706;
+  --drum-bank: #059669;
 
   --scrollbar-track: rgba(0,0,0,0.06);
   --scrollbar-thumb: rgba(0,0,0,0.18);

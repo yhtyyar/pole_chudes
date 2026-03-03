@@ -1,25 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { Loader2, RotateCcw, X } from 'lucide-react';
 import { useGameStore, DRUM_SECTORS } from '../../stores/gameStore';
 import type { DrumSector } from '../../types';
 
 // Visual sectors — shown on the wheel (must match DRUM_SECTORS order exactly)
-const SECTORS: Array<{ label: string; color: string; sector: DrumSector }> = [
-  { label: '100',    color: '#3b82f6', sector: { type: 'points', value: 100 } },
-  { label: '150',    color: '#84cc16', sector: { type: 'points', value: 150 } },
-  { label: '200',    color: '#8b5cf6', sector: { type: 'points', value: 200 } },
-  { label: '250',    color: '#a855f7', sector: { type: 'points', value: 250 } },
-  { label: '300',    color: '#f59e0b', sector: { type: 'points', value: 300 } },
-  { label: '350',    color: '#f97316', sector: { type: 'points', value: 350 } },
-  { label: '400',    color: '#6366f1', sector: { type: 'points', value: 400 } },
-  { label: '500',    color: '#ec4899', sector: { type: 'points', value: 500 } },
-  { label: '1000',   color: '#fbbf24', sector: { type: 'points', value: 1000 } },
-  { label: '×2',     color: '#14b8a6', sector: { type: 'double' } },
-  { label: '+1',     color: '#06b6d4', sector: { type: 'extra' } },
-  { label: 'БАНКРОТ',color: '#ef4444', sector: { type: 'bankrupt' } },
-  { label: 'ПРИЗ',   color: '#f5c542', sector: { type: 'prize' } },
-  { label: 'БАНК',   color: '#10b981', sector: { type: 'bank' } },
+// Colors reference CSS variables for theme adaptability
+const getSectorColor = (type: string): string => {
+  if (typeof window === 'undefined') return '#3b82f6';
+  const styles = getComputedStyle(document.documentElement);
+  switch (type) {
+    case 'points': return styles.getPropertyValue('--drum-points').trim() || '#3b82f6';
+    case 'points-alt': return styles.getPropertyValue('--drum-points-alt').trim() || '#84cc16';
+    case 'points-high': return styles.getPropertyValue('--drum-points-high').trim() || '#f59e0b';
+    case 'points-max': return styles.getPropertyValue('--drum-points-max').trim() || '#fbbf24';
+    case 'double': return styles.getPropertyValue('--drum-double').trim() || '#14b8a6';
+    case 'extra': return styles.getPropertyValue('--drum-extra').trim() || '#06b6d4';
+    case 'bankrupt': return styles.getPropertyValue('--drum-bankrupt').trim() || '#ef4444';
+    case 'prize': return styles.getPropertyValue('--drum-prize').trim() || '#f5c542';
+    case 'bank': return styles.getPropertyValue('--drum-bank').trim() || '#10b981';
+    default: return '#3b82f6';
+  }
+};
+
+const SECTORS: Array<{ label: string; colorType: string; sector: DrumSector }> = [
+  { label: '100',    colorType: 'points', sector: { type: 'points', value: 100 } },
+  { label: '150',    colorType: 'points-alt', sector: { type: 'points', value: 150 } },
+  { label: '200',    colorType: 'points', sector: { type: 'points', value: 200 } },
+  { label: '250',    colorType: 'points', sector: { type: 'points', value: 250 } },
+  { label: '300',    colorType: 'points-high', sector: { type: 'points', value: 300 } },
+  { label: '350',    colorType: 'points-high', sector: { type: 'points', value: 350 } },
+  { label: '400',    colorType: 'points', sector: { type: 'points', value: 400 } },
+  { label: '500',    colorType: 'points', sector: { type: 'points', value: 500 } },
+  { label: '1000',   colorType: 'points-max', sector: { type: 'points', value: 1000 } },
+  { label: '×2',     colorType: 'double', sector: { type: 'double' } },
+  { label: '+1',     colorType: 'extra', sector: { type: 'extra' } },
+  { label: 'БАНКРОТ',colorType: 'bankrupt', sector: { type: 'bankrupt' } },
+  { label: 'ПРИЗ',   colorType: 'prize', sector: { type: 'prize' } },
+  { label: 'БАНК',   colorType: 'bank', sector: { type: 'bank' } },
 ];
 
 const NUM_SECTORS = SECTORS.length;
@@ -27,14 +46,14 @@ const SECTOR_ANGLE = 360 / NUM_SECTORS;
 const SECTOR_HALF_ANGLE = SECTOR_ANGLE / 2;
 
 function sectorColor(sector: DrumSector | null): string {
-  if (!sector) return '#475569';
-  if (sector.type === 'bankrupt') return '#ef4444';
-  if (sector.type === 'prize')    return '#f5c542';
-  if (sector.type === 'bank')     return '#10b981';
-  if (sector.type === 'double')   return '#14b8a6';
-  if (sector.type === 'extra')    return '#06b6d4';
-  if (sector.type === 'points')   return '#3b82f6';
-  return '#475569';
+  if (!sector) return 'var(--color-text-muted)';
+  if (sector.type === 'bankrupt') return 'var(--drum-bankrupt)';
+  if (sector.type === 'prize')    return 'var(--drum-prize)';
+  if (sector.type === 'bank')     return 'var(--drum-bank)';
+  if (sector.type === 'double')   return 'var(--drum-double)';
+  if (sector.type === 'extra')    return 'var(--drum-extra)';
+  if (sector.type === 'points')   return 'var(--drum-points)';
+  return 'var(--color-text-muted)';
 }
 
 function sectorName(sector: DrumSector | null): string {
@@ -43,8 +62,8 @@ function sectorName(sector: DrumSector | null): string {
   if (sector.type === 'double')   return '×2 Удвоение';
   if (sector.type === 'extra')    return '+1 Доп. буква';
   if (sector.type === 'bankrupt') return 'БАНКРОТ';
-  if (sector.type === 'prize')    return '🎁 ПРИЗ';
-  if (sector.type === 'bank')     return '🏦 БАНК';
+  if (sector.type === 'prize')    return 'ПРИЗ';
+  if (sector.type === 'bank')     return 'БАНК';
   return '';
 }
 
@@ -91,6 +110,15 @@ function calculateTargetAngle(sectorIndex: number, currentRotation: number): num
 
 /** Shared SVG wheel — accepts a size prop so it can be rendered at any scale */
 function WheelSvg({ size }: { size: number }) {
+  // Use state to force re-render when theme changes
+  const [, forceUpdate] = useState({});
+  
+  useEffect(() => {
+    const handler = () => forceUpdate({});
+    window.addEventListener('themechange', handler);
+    return () => window.removeEventListener('themechange', handler);
+  }, []);
+
   return (
     <svg viewBox="0 0 200 200" width={size} height={size}>
       <defs>
@@ -123,7 +151,7 @@ function WheelSvg({ size }: { size: number }) {
           <g key={i}>
             <path
               d={`M 100 100 L ${x1} ${y1} A 90 90 0 ${largeArc} 1 ${x2} ${y2} Z`}
-              fill={sec.color}
+              fill={getSectorColor(sec.colorType)}
               stroke="#1a1a2e"
               strokeWidth="0.8"
             />
@@ -318,7 +346,15 @@ export function Drum() {
           ].join(' ')}
           style={!canSpin ? { background: 'var(--color-card)', color: 'var(--color-text-muted)', border: '2px solid var(--color-border)' } : undefined}
         >
-          {drumSpinning ? '⏳ Вращается…' : '🎰 Крутить барабан'}
+          {drumSpinning ? (
+            <span className="flex items-center justify-center gap-2 animate-pulse font-semibold text-base" style={{ color: 'var(--color-text)' }}>
+              <Loader2 className="w-5 h-5 animate-spin" /> Вращается…
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <RotateCcw className="w-5 h-5" /> Крутить барабан
+            </span>
+          )}
         </button>
 
         <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>Space — крутить барабан</p>
@@ -341,9 +377,10 @@ export function Drum() {
               {!drumSpinning && (
                 <button
                   onClick={() => setFullscreen(false)}
-                  className="absolute top-6 right-8 text-white/40 hover:text-white text-3xl leading-none transition-colors"
+                  className="absolute top-6 right-8 text-white/40 hover:text-white transition-colors"
+                  aria-label="Закрыть"
                 >
-                  ✕
+                  <X className="w-8 h-8" />
                 </button>
               )}
 

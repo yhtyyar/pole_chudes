@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
 import { Board } from '../components/Board/Board';
 import { Drum } from '../components/Drum/Drum';
@@ -64,7 +65,10 @@ export function Game() {
         <div className="flex items-center justify-between">
           {/* Left: title + round badge */}
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-lg font-extrabold text-gold whitespace-nowrap">🎡 Поле Чудес</h1>
+            <h1 className="text-lg font-extrabold text-gold whitespace-nowrap flex items-center gap-1.5">
+              <RotateCcw className="w-5 h-5" />
+              Поле Чудес
+            </h1>
             <span
               className={`text-xs font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
                 isFinal
@@ -72,7 +76,11 @@ export function Game() {
                   : 'bg-accent/20 text-accent border-accent/40'
               }`}
             >
-              {isFinal ? '🏆 ФИНАЛ' : `Раунд ${currentRound + 1}/5`}
+              {isFinal ? (
+              <span className="flex items-center gap-1">
+                <Trophy className="w-3 h-3" /> ФИНАЛ
+              </span>
+            ) : (`Раунд ${currentRound + 1}/5`)}
             </span>
             {!isFinal && (
               <span className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>
@@ -97,7 +105,7 @@ export function Game() {
                   : '0 0 12px rgba(99,102,241,0.4)',
               }}
             >
-              <span className="text-lg leading-none">{isLight ? '☀️' : '🌙'}</span>
+              <span className="w-5 h-5">{isLight ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</span>
             </button>
 
             {/* Mute + volume */}
@@ -107,12 +115,12 @@ export function Game() {
               style={{ background: 'var(--color-card)' }}
               title={muted ? 'Включить звук' : 'Выключить звук'}
             >
-              {muted ? '🔇' : '🔊'}
+              {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
             <input
               type="range" min="0" max="1" step="0.05" value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-20 accent-accent"
+              className="w-24 accent-accent"
             />
 
             <button
@@ -121,7 +129,7 @@ export function Game() {
               className="text-sm px-2.5 py-1.5 rounded-lg transition-colors hover:opacity-80"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)' }}
             >
-              💾
+              <Download className="w-4 h-4" />
             </button>
             <button
               onClick={() => { saveLogToFile(); downloadLog(); }}
@@ -129,14 +137,14 @@ export function Game() {
               className="text-sm px-2.5 py-1.5 rounded-lg transition-colors hover:opacity-80"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)' }}
             >
-              📋
+              <FileText className="w-4 h-4" />
             </button>
             <button
               onClick={() => { if (confirm('Сбросить игру?')) resetGame(); }}
               className="text-sm px-2.5 py-1.5 rounded-lg transition-colors hover:text-error"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)' }}
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -192,7 +200,7 @@ export function Game() {
                     className="text-base font-black tabular-nums leading-none"
                     style={{ color: isBankrupt ? '#ef4444' : '#f5c542' }}
                   >
-                    {isBankrupt ? '💀' : player.score}
+                    {isBankrupt ? <Skull className="w-5 h-5" /> : player.score}
                   </span>
                   {!isBankrupt && (
                     <span
@@ -203,7 +211,10 @@ export function Game() {
                     </span>
                   )}
                   {player.roundScore > 0 && (
-                    <span className="text-xs font-bold text-success leading-none flex-shrink-0">
+                    <span 
+                      className="text-xs font-bold text-success leading-none flex-shrink-0 cursor-help"
+                      title={`+${player.roundScore} очков за текущий раунд`}
+                    >
                       +{player.roundScore}
                     </span>
                   )}
@@ -223,10 +234,10 @@ export function Game() {
       </header>
 
       {/* ══ BODY ════════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left panel: Letter input + Admin */}
         <aside
-          className="w-64 border-r flex flex-col gap-3 p-4 overflow-y-auto flex-shrink-0"
+          className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r flex flex-col gap-3 p-4 overflow-y-auto flex-shrink-0"
           style={{ background: 'var(--color-panel)', borderColor: 'var(--color-border)' }}
         >
           {/* Current player indicator */}
@@ -272,7 +283,7 @@ export function Game() {
         </aside>
 
         {/* Center: Board + Question */}
-        <main className="flex-1 min-w-0 flex flex-col items-center justify-start p-6 gap-5 overflow-y-auto">
+        <main className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 lg:p-6 gap-4 lg:gap-5 overflow-y-auto order-first lg:order-none">
           <div className="w-full max-w-4xl">
             <Board />
           </div>
@@ -283,7 +294,7 @@ export function Game() {
 
         {/* Right panel: Drum + Timer */}
         <aside
-          className="w-96 border-l flex flex-col items-center gap-4 p-4 overflow-y-auto flex-shrink-0"
+          className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l flex flex-col items-center gap-4 p-4 overflow-y-auto flex-shrink-0"
           style={{ background: 'var(--color-panel)', borderColor: 'var(--color-border)' }}
         >
           <Drum />
@@ -316,7 +327,9 @@ export function Game() {
                 color: 'var(--color-text)',
               }}
             >
-              <div className="text-6xl mb-4">🏆</div>
+              <div className="mb-4">
+                <Trophy className="w-16 h-16 mx-auto text-gold" />
+              </div>
               <h2 className="text-3xl font-bold text-gold mb-2">
                 {isFinal ? 'Игра завершена!' : 'Раунд завершён!'}
               </h2>
@@ -346,25 +359,25 @@ export function Game() {
                 {!isFinal && currentRound < 4 && (
                   <button
                     onClick={startNextRound}
-                    className="w-full py-4 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(233,69,96,0.4)] transition-all active:scale-95"
+                    className="w-full py-4 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(233,69,96,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    ▶ Следующий раунд
+                    <Play className="w-5 h-5" /> Следующий раунд
                   </button>
                 )}
                 {!isFinal && currentRound === 4 && (
                   <button
                     onClick={startFinal}
-                    className="w-full py-4 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,66,0.4)] transition-all active:scale-95"
+                    className="w-full py-4 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,66,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    🏆 Начать финал!
+                    <Trophy className="w-5 h-5" /> Начать финал!
                   </button>
                 )}
                 {isFinal && (
                   <button
                     onClick={() => useGameStore.getState().resetGame()}
-                    className="w-full py-4 rounded-xl bg-success hover:bg-success/80 text-white font-bold text-lg uppercase tracking-widest transition-all active:scale-95"
+                    className="w-full py-4 rounded-xl bg-success hover:bg-success/80 text-white font-bold text-lg uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    🎉 Завершить игру
+                    <PartyPopper className="w-5 h-5" /> Завершить игру
                   </button>
                 )}
               </div>
