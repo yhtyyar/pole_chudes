@@ -1,29 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { useGameStore } from '../../stores/gameStore';
+import { useGameStore, DRUM_SECTORS } from '../../stores/gameStore';
 import type { DrumSector } from '../../types';
 
-// Visual sectors — shown on the wheel (must visually match weighted logic in gameStore.ts)
-const SECTORS: Array<{ label: string; color: string }> = [
-  { label: '100',    color: '#3b82f6' },  // index 0: points 100
-  { label: '150',    color: '#84cc16' },  // index 1: points 150
-  { label: '200',    color: '#8b5cf6' },  // index 2: points 200
-  { label: '250',    color: '#a855f7' },  // index 3: points 250
-  { label: '300',    color: '#f59e0b' },  // index 4: points 300
-  { label: '350',    color: '#f97316' },  // index 5: points 350
-  { label: '400',    color: '#6366f1' },  // index 6: points 400
-  { label: '500',    color: '#ec4899' },  // index 7: points 500
-  { label: '1000',   color: '#fbbf24' },  // index 8: points 1000
-  { label: '×2',     color: '#14b8a6' },  // index 9: double
-  { label: '+1',     color: '#06b6d4' },  // index 10: extra
-  { label: 'БАНКРОТ',color: '#ef4444' },  // index 11: bankrupt
-  { label: 'ПРИЗ',   color: '#f5c542' },  // index 12: prize
-  { label: 'БАНК',   color: '#10b981' },  // index 13: bank
+// Visual sectors — shown on the wheel (must match DRUM_SECTORS order exactly)
+const SECTORS: Array<{ label: string; color: string; sector: DrumSector }> = [
+  { label: '100',    color: '#3b82f6', sector: { type: 'points', value: 100 } },
+  { label: '150',    color: '#84cc16', sector: { type: 'points', value: 150 } },
+  { label: '200',    color: '#8b5cf6', sector: { type: 'points', value: 200 } },
+  { label: '250',    color: '#a855f7', sector: { type: 'points', value: 250 } },
+  { label: '300',    color: '#f59e0b', sector: { type: 'points', value: 300 } },
+  { label: '350',    color: '#f97316', sector: { type: 'points', value: 350 } },
+  { label: '400',    color: '#6366f1', sector: { type: 'points', value: 400 } },
+  { label: '500',    color: '#ec4899', sector: { type: 'points', value: 500 } },
+  { label: '1000',   color: '#fbbf24', sector: { type: 'points', value: 1000 } },
+  { label: '×2',     color: '#14b8a6', sector: { type: 'double' } },
+  { label: '+1',     color: '#06b6d4', sector: { type: 'extra' } },
+  { label: 'БАНКРОТ',color: '#ef4444', sector: { type: 'bankrupt' } },
+  { label: 'ПРИЗ',   color: '#f5c542', sector: { type: 'prize' } },
+  { label: 'БАНК',   color: '#10b981', sector: { type: 'bank' } },
 ];
 
 const NUM_SECTORS = SECTORS.length;
 const SECTOR_ANGLE = 360 / NUM_SECTORS;
+const SECTOR_HALF_ANGLE = SECTOR_ANGLE / 2;
 
 function sectorColor(sector: DrumSector | null): string {
   if (!sector) return '#475569';
@@ -45,6 +46,47 @@ function sectorName(sector: DrumSector | null): string {
   if (sector.type === 'prize')    return '🎁 ПРИЗ';
   if (sector.type === 'bank')     return '🏦 БАНК';
   return '';
+}
+
+/** Find sector index by comparing sector data */
+function findSectorIndex(target: DrumSector): number {
+  for (let i = 0; i < SECTORS.length; i++) {
+    const s = SECTORS[i].sector;
+    if (s.type !== target.type) continue;
+    if (s.type === 'points' && target.type === 'points') {
+      if (s.value === target.value) return i;
+    } else {
+      return i;
+    }
+  }
+  return 0;
+}
+
+/** Calculate rotation angle to land on specific sector index */
+function calculateTargetAngle(sectorIndex: number, currentRotation: number): number {
+  // Sector centers are at: -90 + i * SECTOR_ANGLE + SECTOR_HALF_ANGLE
+  // We want: sectorCenter + targetRotation ≡ -90 (mod 360)
+  // So: targetRotation ≡ -90 - sectorCenter (mod 360)
+  const sectorCenter = -90 + sectorIndex * SECTOR_ANGLE + SECTOR_HALF_ANGLE;
+  
+  // Calculate base rotation to align this sector with pointer
+  let targetRotation = -90 - sectorCenter;
+  
+  // Normalize to positive angle
+  targetRotation = ((targetRotation % 360) + 360) % 360;
+  
+  // Add extra spins (5-8 full rotations) for visual effect
+  const extraSpins = 5 + Math.floor(Math.random() * 4);
+  const fullRotation = extraSpins * 360;
+  
+  // Calculate final angle relative to current rotation
+  const currentBase = ((currentRotation % 360) + 360) % 360;
+  let delta = targetRotation - currentBase;
+  
+  // Ensure we rotate forward (clockwise)
+  if (delta < 0) delta += 360;
+  
+  return currentRotation + fullRotation + delta;
 }
 
 /** Shared SVG wheel — accepts a size prop so it can be rendered at any scale */
@@ -148,12 +190,30 @@ export function Drum() {
   const spinStartedRef = useRef(false);
   // Ref for fullscreen wheel to sync rotation
   const fullscreenRotationRef = useRef(0);
+  // Store the pending sector for animation
+  const pendingSectorRef = useRef<DrumSector | null>(null);
 
   const canSpin = phase === 'spin' && !drumSpinning;
 
-  // Handle spin: open fullscreen then trigger store action
+  // Handle spin: open fullscreen, select sector, then trigger store action
   function handleSpin() {
     if (!canSpin) return;
+    
+    // Select sector now so we can calculate exact rotation
+    const total = DRUM_SECTORS.reduce((s, d) => s + d.weight, 0);
+    let rand = Math.random() * total;
+    let selectedSector: DrumSector = DRUM_SECTORS[0].sector;
+    for (const { sector, weight } of DRUM_SECTORS) {
+      rand -= weight;
+      if (rand <= 0) {
+        selectedSector = sector;
+        break;
+      }
+    }
+    
+    // Store for animation
+    pendingSectorRef.current = selectedSector;
+    
     // Sync fullscreen rotation with current small wheel rotation before opening
     fullscreenRotationRef.current = rotationRef.current;
     setFullscreen(true);
@@ -162,10 +222,15 @@ export function Drum() {
 
   // Drive the Framer Motion animation whenever drumSpinning flips to true
   useEffect(() => {
-    if (drumSpinning && !spinStartedRef.current) {
+    if (drumSpinning && !spinStartedRef.current && pendingSectorRef.current) {
       spinStartedRef.current = true;
-      const extraSpins  = 5 + Math.random() * 3;
-      const targetAngle = rotationRef.current + extraSpins * 360 + Math.random() * 360;
+      
+      // Find index of selected sector
+      const sectorIndex = findSectorIndex(pendingSectorRef.current);
+      
+      // Calculate exact angle to land on this sector
+      const targetAngle = calculateTargetAngle(sectorIndex, rotationRef.current);
+      
       rotationRef.current = targetAngle;
       fullscreenRotationRef.current = targetAngle;
 
@@ -177,6 +242,7 @@ export function Drum() {
 
     if (!drumSpinning) {
       spinStartedRef.current = false;
+      pendingSectorRef.current = null;
     }
   }, [drumSpinning, controls]);
 
