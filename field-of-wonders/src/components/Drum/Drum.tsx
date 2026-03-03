@@ -4,22 +4,22 @@ import { createPortal } from 'react-dom';
 import { useGameStore } from '../../stores/gameStore';
 import type { DrumSector } from '../../types';
 
-// Visual sectors — shown on the wheel (must visually match weighted logic)
+// Visual sectors — shown on the wheel (must visually match weighted logic in gameStore.ts)
 const SECTORS: Array<{ label: string; color: string }> = [
-  { label: '100',    color: '#3b82f6' },
-  { label: '200',    color: '#8b5cf6' },
-  { label: 'БАНК',   color: '#10b981' },
-  { label: '300',    color: '#f59e0b' },
-  { label: 'БАНКРОТ',color: '#ef4444' },
-  { label: '400',    color: '#6366f1' },
-  { label: 'ПРИЗ',   color: '#f5c542' },
-  { label: '500',    color: '#ec4899' },
-  { label: '×2',     color: '#14b8a6' },
-  { label: '150',    color: '#84cc16' },
-  { label: '+1',     color: '#06b6d4' },
-  { label: '250',    color: '#a855f7' },
-  { label: '350',    color: '#f97316' },
-  { label: '1000',   color: '#fbbf24' },
+  { label: '100',    color: '#3b82f6' },  // index 0: points 100
+  { label: '150',    color: '#84cc16' },  // index 1: points 150
+  { label: '200',    color: '#8b5cf6' },  // index 2: points 200
+  { label: '250',    color: '#a855f7' },  // index 3: points 250
+  { label: '300',    color: '#f59e0b' },  // index 4: points 300
+  { label: '350',    color: '#f97316' },  // index 5: points 350
+  { label: '400',    color: '#6366f1' },  // index 6: points 400
+  { label: '500',    color: '#ec4899' },  // index 7: points 500
+  { label: '1000',   color: '#fbbf24' },  // index 8: points 1000
+  { label: '×2',     color: '#14b8a6' },  // index 9: double
+  { label: '+1',     color: '#06b6d4' },  // index 10: extra
+  { label: 'БАНКРОТ',color: '#ef4444' },  // index 11: bankrupt
+  { label: 'ПРИЗ',   color: '#f5c542' },  // index 12: prize
+  { label: 'БАНК',   color: '#10b981' },  // index 13: bank
 ];
 
 const NUM_SECTORS = SECTORS.length;
@@ -146,12 +146,16 @@ export function Drum() {
   const [fullscreen, setFullscreen] = useState(false);
   // Track whether we already launched the spin animation
   const spinStartedRef = useRef(false);
+  // Ref for fullscreen wheel to sync rotation
+  const fullscreenRotationRef = useRef(0);
 
   const canSpin = phase === 'spin' && !drumSpinning;
 
   // Handle spin: open fullscreen then trigger store action
   function handleSpin() {
     if (!canSpin) return;
+    // Sync fullscreen rotation with current small wheel rotation before opening
+    fullscreenRotationRef.current = rotationRef.current;
     setFullscreen(true);
     spinDrumAction();
   }
@@ -163,6 +167,7 @@ export function Drum() {
       const extraSpins  = 5 + Math.random() * 3;
       const targetAngle = rotationRef.current + extraSpins * 360 + Math.random() * 360;
       rotationRef.current = targetAngle;
+      fullscreenRotationRef.current = targetAngle;
 
       controls.start({
         rotate: targetAngle,
@@ -276,11 +281,11 @@ export function Drum() {
                 </button>
               )}
 
-              {/* Big wheel */}
+              {/* Big wheel - uses same rotation angle as small wheel */}
               <motion.div
-                initial={{ scale: 0.4, opacity: 0 }}
-                animate={{ scale: 1,   opacity: 1 }}
-                exit={{ scale: 0.4,    opacity: 0 }}
+                initial={{ scale: 0.4, opacity: 0, rotate: fullscreenRotationRef.current }}
+                animate={{ scale: 1, opacity: 1, rotate: rotationRef.current }}
+                exit={{ scale: 0.4, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 22 }}
                 className="relative flex-shrink-0"
                 style={{ width: 520, height: 520 }}
@@ -289,7 +294,7 @@ export function Drum() {
                 {/* Re-use the same controls so big + small rotate in sync */}
                 <motion.div
                   animate={controls}
-                  initial={{ rotate: 0 }}
+                  initial={{ rotate: fullscreenRotationRef.current }}
                   style={{ width: 520, height: 520 }}
                 >
                   <WheelSvg size={520} />
