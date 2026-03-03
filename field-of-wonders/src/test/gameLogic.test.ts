@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useGameStore } from '../stores/gameStore';
+import { useGameStore, spinDrumWithSeed } from '../stores/gameStore';
 import type { SetupForm } from '../types';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -121,9 +121,13 @@ describe('spinDrumAction', () => {
     expect(useGameStore.getState().turn.drumSpinning).toBe(false);
   });
 
-  it('resolves after 3200ms with a sector', () => {
+  it('resolves after finishDrumSpin with a sector', () => {
+    const testSeed = 0.5;
+    const expectedSector = spinDrumWithSeed(testSeed);
+    vi.spyOn(Math, 'random').mockReturnValue(testSeed);
     useGameStore.getState().spinDrumAction();
-    vi.advanceTimersByTime(3200);
+    useGameStore.getState().finishDrumSpin(expectedSector);
+    vi.restoreAllMocks();
     const { turn } = useGameStore.getState();
     expect(turn.drumSpinning).toBe(false);
     expect(turn.sector).not.toBeNull();
@@ -154,10 +158,11 @@ describe('finishDrumSpin — bankrupt', () => {
     // spinDrum uses: rand -= weight; if (rand <= 0) return sector
     // bankrupt hits when rand * 72 lands in (62, 67] → use midpoint 64.5/72
     const bankruptSeed = 64.5 / 72;
+    const expectedSector = spinDrumWithSeed(bankruptSeed);
     vi.spyOn(Math, 'random').mockReturnValue(bankruptSeed);
 
     useGameStore.getState().spinDrumAction();
-    vi.advanceTimersByTime(3200);
+    useGameStore.getState().finishDrumSpin(expectedSector);
 
     const { players, turn } = useGameStore.getState();
     const currentPlayer = players[0]; // currentPlayerIndex = 0, group 1

@@ -36,11 +36,13 @@ function setup() {
   useGameStore.getState().startGame(FORM);
 }
 
-/** Run a spin with a deterministic seed, wait for finishDrumSpin */
+/** Run a spin with a deterministic seed, manually call finishDrumSpin with expected sector */
 function spinWithSeed(seed: number) {
+  const expectedSector = spinDrumWithSeed(seed);
   vi.spyOn(Math, 'random').mockReturnValue(seed);
   useGameStore.getState().spinDrumAction();
-  vi.advanceTimersByTime(3200);
+  // Manually call finishDrumSpin with expected sector (animation .then() equivalent)
+  useGameStore.getState().finishDrumSpin(expectedSector);
   vi.restoreAllMocks();
 }
 
@@ -81,10 +83,10 @@ describe('Integration: drum sector == displayed result', () => {
       // Re-setup for each spin (turn resets)
       setup();
 
-      // Spy on Math.random so finishDrumSpin selects the same sector
+      // Spy on Math.random and manually call finishDrumSpin with expected sector
       vi.spyOn(Math, 'random').mockReturnValue(seed);
       useGameStore.getState().spinDrumAction();
-      vi.advanceTimersByTime(3200);
+      useGameStore.getState().finishDrumSpin(expected);
       vi.restoreAllMocks();
 
       const { turn } = useGameStore.getState();
@@ -162,20 +164,24 @@ describe('Integration: drum sector == displayed result', () => {
     expect(turn.phase).toBe('input');
   });
 
-  it('drum is never still spinning after 3200ms timeout', () => {
-    spinWithSeed(0.42);
+  it('drum is never still spinning after finishDrumSpin called', () => {
+    const expectedSector = spinDrumWithSeed(0.42);
+    useGameStore.getState().spinDrumAction();
+    useGameStore.getState().finishDrumSpin(expectedSector);
     expect(useGameStore.getState().turn.drumSpinning).toBe(false);
   });
 
-  it('sector is never null after drum stops', () => {
+  it('sector is never null after finishDrumSpin', () => {
     // Run 20 random spins
     for (let i = 0; i < 20; i++) {
       setup();
-      vi.useFakeTimers();
+      const seed = Math.random();
+      const expectedSector = spinDrumWithSeed(seed);
+      vi.spyOn(Math, 'random').mockReturnValue(seed);
       useGameStore.getState().spinDrumAction();
-      vi.advanceTimersByTime(3200);
+      useGameStore.getState().finishDrumSpin(expectedSector);
+      vi.restoreAllMocks();
       expect(useGameStore.getState().turn.sector).not.toBeNull();
-      vi.useRealTimers();
     }
   });
 });

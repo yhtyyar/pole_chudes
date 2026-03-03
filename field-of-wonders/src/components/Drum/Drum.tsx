@@ -208,6 +208,7 @@ export function Drum() {
   const sector        = useGameStore((s) => s.turn.sector);
   const phase         = useGameStore((s) => s.turn.phase);
   const spinDrumAction = useGameStore((s) => s.spinDrumAction);
+  const finishDrumSpin = useGameStore((s) => s.finishDrumSpin);
 
   const controls     = useAnimation();
   const rotationRef  = useRef(0);
@@ -218,12 +219,12 @@ export function Drum() {
   const spinStartedRef = useRef(false);
   // Ref for fullscreen wheel to sync rotation
   const fullscreenRotationRef = useRef(0);
-  // Store the pending sector for animation
+  // Store the pending sector for animation (selected before spin, applied after)
   const pendingSectorRef = useRef<DrumSector | null>(null);
 
   const canSpin = phase === 'spin' && !drumSpinning;
 
-  // Handle spin: open fullscreen, select sector, then trigger store action
+  // Handle spin: select sector, open fullscreen, trigger store action, start animation
   function handleSpin() {
     if (!canSpin) return;
     
@@ -239,7 +240,7 @@ export function Drum() {
       }
     }
     
-    // Store for animation
+    // Store for animation and later application
     pendingSectorRef.current = selectedSector;
     
     // Sync fullscreen rotation with current small wheel rotation before opening
@@ -265,6 +266,11 @@ export function Drum() {
       controls.start({
         rotate: targetAngle,
         transition: { duration: 3.2, ease: [0.17, 0.67, 0.35, 1.0] },
+      }).then(() => {
+        // Animation complete - now apply the result to the store
+        if (pendingSectorRef.current) {
+          finishDrumSpin(pendingSectorRef.current);
+        }
       });
     }
 
@@ -272,7 +278,7 @@ export function Drum() {
       spinStartedRef.current = false;
       pendingSectorRef.current = null;
     }
-  }, [drumSpinning, controls]);
+  }, [drumSpinning, controls, finishDrumSpin]);
 
   // Auto-close fullscreen 1.8s after result appears
   useEffect(() => {

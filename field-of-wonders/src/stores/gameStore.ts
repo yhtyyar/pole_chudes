@@ -97,7 +97,7 @@ export interface GameActions {
 
   // Drum
   spinDrumAction: () => void;
-  finishDrumSpin: () => void;
+  finishDrumSpin: (sector: DrumSector) => void;
 
   // Letter input
   setPendingLetter: (letter: string) => void;
@@ -201,15 +201,9 @@ export const useGameStore = create<StoreState>((set, get) => ({
     if (!muted) sounds.drum(volume);
     logEvent('DRUM', 'Барабан запущен', { playerIndex: turn.currentPlayerIndex });
     set((s) => ({ turn: { ...s.turn, drumSpinning: true, sector: null } }));
-
-    // Animate for 3s then resolve
-    setTimeout(() => {
-      get().finishDrumSpin();
-    }, 3200);
   },
 
-  finishDrumSpin() {
-    const sector = spinDrum();
+  finishDrumSpin(sector: DrumSector) {
     const { muted, volume } = get();
     logEvent('DRUM', 'Барабан остановился', { sector });
 
