@@ -6,6 +6,9 @@ import { gameLogPlugin } from './src/plugins/gameLogPlugin'
 export default defineConfig({
   base: '/pole_chudes/',
   plugins: [react(), gameLogPlugin()],
+  build: {
+    outDir: 'dist',
+  },
   test: {
     globals: true,
     environment: 'jsdom',
