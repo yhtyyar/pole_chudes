@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: field-of-wonders
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,13 +29,19 @@ jobs:
           cache-dependency-path: field-of-wonders/package-lock.json
 
       - name: Install dependencies
+        working-directory: field-of-wonders
         run: npm ci
 
       - name: Run tests
+        working-directory: field-of-wonders
         run: npm test
 
       - name: Build
+        working-directory: field-of-wonders
         run: npm run build
+
+      - name: Verify dist contents
+        run: ls -la field-of-wonders/dist/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
