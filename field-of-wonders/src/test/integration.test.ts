@@ -20,6 +20,7 @@ import type { SetupForm, DrumSector } from '../types';
 
 const FORM: SetupForm = {
   groups: ['Группа 1', 'Группа 2', 'Группа 3', 'Группа 4', 'Группа 5'],
+  playerNames: [],
   rounds: [
     { word: 'БАРАБАН', question: 'Ударный инструмент' },
     { word: 'СЛОВО',   question: 'Единица речи' },

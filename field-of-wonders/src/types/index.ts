@@ -55,6 +55,8 @@ export interface GameState {
   config: {
     groups: string[];
     rounds: RoundConfig[];
+    /** Имена игроков в каждой группе (5 игроков × N групп) */
+    playerNames: string[][];
   };
   currentRound: number;
   players: Player[];
@@ -64,9 +66,29 @@ export interface GameState {
   questionVisible: boolean;
   muted: boolean;
   volume: number;
+  bgMusicEnabled: boolean;
+  bgMusicVolume: number;
+}
+
+/** Сохранённое имя игрока для переиспользования */
+export interface KnownPlayer {
+  id: string;
+  name: string;
+  lastUsed: number;
+}
+
+/** Запись в итоговой таблице очков */
+export interface GameTopEntry {
+  playerId: string;
+  name: string;
+  totalScore: number;
+  groupName: string;
+  roundsWon: number;
 }
 
 export interface SetupForm {
   groups: string[];
+  /** Имена игроков в каждой группе */
+  playerNames: string[][];
   rounds: Array<{ word: string; question: string }>;
 }

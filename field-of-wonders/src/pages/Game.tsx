@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check, RefreshCw, Music } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
 import { Board } from '../components/Board/Board';
 import { Drum } from '../components/Drum/Drum';
@@ -29,14 +29,21 @@ export function Game() {
   const volume        = useGameStore((s) => s.volume);
   const toggleMute    = useGameStore((s) => s.toggleMute);
   const setVolume     = useGameStore((s) => s.setVolume);
-  const startNextRound = useGameStore((s) => s.startNextRound);
-  const startFinal    = useGameStore((s) => s.startFinal);
-  const exportState   = useGameStore((s) => s.exportState);
-  const resetGame     = useGameStore((s) => s.resetGame);
+  const startNextRound   = useGameStore((s) => s.startNextRound);
+  const startFinal       = useGameStore((s) => s.startFinal);
+  const exportState      = useGameStore((s) => s.exportState);
+  const resetGame        = useGameStore((s) => s.resetGame);
+  const restartGame      = useGameStore((s) => s.restartGame);
   const updatePlayerName = useGameStore((s) => s.updatePlayerName);
+  const bgMusicEnabled   = useGameStore((s) => s.bgMusicEnabled);
+  const bgMusicVolume    = useGameStore((s) => s.bgMusicVolume);
+  const toggleBgMusic    = useGameStore((s) => s.toggleBgMusic);
+  const setBgMusicVol    = useGameStore((s) => s.setBgMusicVolume);
 
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [showRestartModal, setShowRestartModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const isFinal        = gameStatus === 'final' || config.rounds[currentRound]?.isFinal;
   const isRoundComplete = gameStatus === 'roundComplete';
@@ -143,8 +150,41 @@ export function Game() {
             >
               <FileText className="w-4 h-4" />
             </button>
+            {/* Bg music */}
             <button
-              onClick={() => { if (confirm('Сбросить игру?')) resetGame(); }}
+              onClick={toggleBgMusic}
+              title={bgMusicEnabled ? 'Выключить фоновую музыку' : 'Включить фоновую музыку'}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                bgMusicEnabled ? 'text-gold' : 'hover:opacity-80'
+              }`}
+              style={{ background: bgMusicEnabled ? 'rgba(245,197,66,0.15)' : 'var(--color-card)', color: bgMusicEnabled ? '#f5c542' : 'var(--color-text-muted)' }}
+            >
+              <Music className="w-4 h-4" />
+            </button>
+            {bgMusicEnabled && (
+              <input
+                type="range" min="0.05" max="0.8" step="0.05"
+                value={bgMusicVolume}
+                onChange={(e) => setBgMusicVol(parseFloat(e.target.value))}
+                className="w-16 accent-gold"
+                title="Громкость музыки"
+              />
+            )}
+
+            {/* Restart (keep config) */}
+            <button
+              onClick={() => setShowRestartModal(true)}
+              title="Перезапустить игру (сохранить слова)"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:text-gold"
+              style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)' }}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            {/* Full reset */}
+            <button
+              onClick={() => setShowResetModal(true)}
+              title="Сбросить игру"
               className="text-sm px-2.5 py-1.5 rounded-lg transition-colors hover:text-error"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)' }}
             >
@@ -348,6 +388,86 @@ export function Game() {
           </div>
         </aside>
       </div>
+
+      {/* ══ RESTART MODAL ════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showRestartModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={() => setShowRestartModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl p-8 text-center max-w-sm w-full mx-4 border"
+              style={{ background: 'var(--color-panel)', borderColor: 'rgba(245,197,66,0.3)', color: 'var(--color-text)' }}
+            >
+              <RefreshCw className="w-12 h-12 mx-auto text-gold mb-4" />
+              <h2 className="text-xl font-bold mb-2">Перезапустить игру?</h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                Слова и группы сохранятся. Все очки и прогресс будут сброшены.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRestartModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all hover:opacity-80"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => { restartGame(); setShowRestartModal(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-sm transition-all active:scale-95"
+                >
+                  Перезапустить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ FULL RESET MODAL ════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={() => setShowResetModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-2xl p-8 text-center max-w-sm w-full mx-4 border"
+              style={{ background: 'var(--color-panel)', borderColor: 'rgba(239,68,68,0.3)', color: 'var(--color-text)' }}
+            >
+              <X className="w-12 h-12 mx-auto text-error mb-4" />
+              <h2 className="text-xl font-bold mb-2">Сбросить всё?</h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                Игра и конфигурация будут полностью удалены. Вы вернётесь на экран настройки.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all hover:opacity-80"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => { resetGame(); setShowResetModal(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-error hover:bg-error/80 text-white font-bold text-sm transition-all active:scale-95"
+                >
+                  Сбросить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ══ ROUND COMPLETE OVERLAY ══════════════════════════════════════ */}
       <AnimatePresence>

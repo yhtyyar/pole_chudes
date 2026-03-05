@@ -6,6 +6,7 @@ import type { SetupForm } from '../types';
 
 const FORM: SetupForm = {
   groups: ['Группа 1', 'Группа 2', 'Группа 3', 'Группа 4', 'Группа 5'],
+  playerNames: [],
   rounds: [
     { word: 'СЛОВО',    question: 'Первый вопрос'   },
     { word: 'БАРАБАН',  question: 'Второй вопрос'   },

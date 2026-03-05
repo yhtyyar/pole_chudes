@@ -6,6 +6,7 @@ const MINIMAL_STATE: GameState = {
   meta: { version: '1.0.0', createdAt: 1000, lastSaved: 1000 },
   config: {
     groups: ['Группа 1', 'Группа 2'],
+    playerNames: [],
     rounds: [
       { id: 0, word: 'СЛОВО', question: 'Вопрос 1', completed: false, isFinal: false },
     ],
@@ -30,6 +31,8 @@ const MINIMAL_STATE: GameState = {
   questionVisible: true,
   muted: false,
   volume: 0.8,
+  bgMusicEnabled: false,
+  bgMusicVolume: 0.4,
 };
 
 describe('storage — saveState / loadState', () => {

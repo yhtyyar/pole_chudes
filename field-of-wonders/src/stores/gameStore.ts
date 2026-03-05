@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import type { GameState, Player, DrumSector, SetupForm, TurnState } from '../types';
 import { saveState, loadState, clearState, exportState, importState } from '../utils/storage';
-import { sounds, resumeAudio } from '../utils/sounds';
+import { sounds, resumeAudio, startBgMusic, stopBgMusic, setBgMusicVolume as setBgMusicVolumeUtil } from '../utils/sounds';
 import { logEvent } from '../utils/gameLogger';
+import { saveKnownPlayers } from '../utils/knownPlayers';
 
 // Drum sectors with weights — exported for testing
 export const DRUM_SECTORS: Array<{ sector: DrumSector; weight: number }> = [
@@ -59,13 +60,13 @@ function makeInitialTurn(): GameState['turn'] {
   };
 }
 
-function buildInitialPlayers(groups: string[]): Player[] {
+function buildInitialPlayers(groups: string[], playerNames: string[][]): Player[] {
   const players: Player[] = [];
   groups.forEach((_group, gi) => {
     for (let p = 0; p < 5; p++) {
       players.push({
         id: `g${gi + 1}p${p + 1}`,
-        name: `Игрок ${p + 1}`,
+        name: playerNames[gi]?.[p]?.trim() || `Игрок ${p + 1}`,
         group: gi + 1,
         score: 0,
         roundScore: 0,
@@ -94,6 +95,7 @@ export interface GameActions {
   startGame: (form: SetupForm) => void;
   loadSavedState: () => boolean;
   resetGame: () => void;
+  restartGame: () => void;
 
   // Drum
   spinDrumAction: () => void;
@@ -115,6 +117,8 @@ export interface GameActions {
   toggleMute: () => void;
   setVolume: (v: number) => void;
   updatePlayerName: (playerId: string, name: string) => void;
+  toggleBgMusic: () => void;
+  setBgMusicVolume: (v: number) => void;
 
   // Timer
   tickTimer: () => void;
@@ -135,7 +139,7 @@ export interface GameActions {
 
 const DEFAULT_STATE: GameState = {
   meta: { version: '1.0.0', createdAt: 0, lastSaved: 0 },
-  config: { groups: [], rounds: [] },
+  config: { groups: [], rounds: [], playerNames: [] },
   currentRound: 0,
   players: [],
   board: { word: '', revealed: [] },
@@ -144,6 +148,8 @@ const DEFAULT_STATE: GameState = {
   questionVisible: true,
   muted: false,
   volume: 0.8,
+  bgMusicEnabled: false,
+  bgMusicVolume: 0.4,
 };
 
 type StoreState = GameState & GameActions;
@@ -165,33 +171,75 @@ export const useGameStore = create<StoreState>((set, get) => ({
       isFinal: i === 5,
     }));
 
+    // Save all entered player names to the known-players book
+    const allNames = (form.playerNames ?? []).flat().filter(Boolean);
+    if (allNames.length) saveKnownPlayers(allNames);
+
+    const playerNames = form.playerNames ?? [];
     const state: GameState = {
       meta: { version: '1.0.0', createdAt: now, lastSaved: now },
-      config: { groups: form.groups.map((g) => g.trim()), rounds },
+      config: { groups: form.groups.map((g) => g.trim()), rounds, playerNames },
       currentRound: 0,
-      players: buildInitialPlayers(form.groups),
+      players: buildInitialPlayers(form.groups, playerNames),
       board: { word, revealed: Array(word.length).fill(false) },
       turn: makeInitialTurn(),
       gameStatus: 'playing',
       questionVisible: true,
       muted: get().muted,
       volume: get().volume,
+      bgMusicEnabled: get().bgMusicEnabled,
+      bgMusicVolume: get().bgMusicVolume,
     };
 
     logEvent('GAME', 'Игра начата', { groups: form.groups, rounds: rounds.map((r) => r.word) });
     saveState(state);
     set(state);
+
+    // Start bg music if enabled
+    if (get().bgMusicEnabled) startBgMusic(get().bgMusicVolume);
+  },
+
+  restartGame() {
+    // Keep config (words/groups/playerNames) but reset all scores and round state
+    const { config, bgMusicEnabled, bgMusicVolume } = get();
+    if (!config.rounds.length) return;
+    const word = config.rounds[0].word;
+    stopBgMusic();
+    logEvent('GAME', 'Игра перезапущена');
+    const state: GameState = {
+      meta: { version: '1.0.0', createdAt: Date.now(), lastSaved: Date.now() },
+      config,
+      currentRound: 0,
+      players: buildInitialPlayers(config.groups, config.playerNames ?? []),
+      board: { word, revealed: Array(word.length).fill(false) },
+      turn: makeInitialTurn(),
+      gameStatus: 'playing',
+      questionVisible: true,
+      muted: get().muted,
+      volume: get().volume,
+      bgMusicEnabled,
+      bgMusicVolume,
+    };
+    saveState(state);
+    set(state);
+    if (bgMusicEnabled) startBgMusic(bgMusicVolume);
   },
 
   loadSavedState() {
     const saved = loadState();
     if (!saved) return false;
+    // Ensure new fields exist for backward-compat with old saves
+    if (!saved.config.playerNames) saved.config.playerNames = [];
+    if (saved.bgMusicEnabled === undefined) saved.bgMusicEnabled = false;
+    if (saved.bgMusicVolume === undefined) saved.bgMusicVolume = 0.4;
     set(saved);
+    if (saved.bgMusicEnabled) startBgMusic(saved.bgMusicVolume);
     return true;
   },
 
   resetGame() {
     logEvent('GAME', 'Игра сброшена');
+    stopBgMusic();
     clearState();
     set({ ...DEFAULT_STATE });
   },
@@ -236,7 +284,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
       // Auto-advance after 2s
       setTimeout(() => get().nextPlayer(), 2000);
     } else if (sector.type === 'prize') {
-      // BUG FIX: prize was stuck — ведущий решает, но таймер всё равно запускаем
       if (!muted) sounds.prize(volume);
       set((s) => ({
         turn: {
@@ -259,17 +306,20 @@ export const useGameStore = create<StoreState>((set, get) => ({
           timer: 15,
         },
       }));
-    } else {
-      // points, double, extra → enter letter
+    } else if (sector.type === 'double') {
+      if (!muted) sounds.double(volume);
       set((s) => ({
-        turn: {
-          ...s.turn,
-          drumSpinning: false,
-          sector,
-          phase: 'input',
-          timerRunning: true,
-          timer: 15,
-        },
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
+      }));
+    } else if (sector.type === 'extra') {
+      if (!muted) sounds.extra(volume);
+      set((s) => ({
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
+      }));
+    } else {
+      // points → enter letter
+      set((s) => ({
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
       }));
     }
 
@@ -562,6 +612,24 @@ export const useGameStore = create<StoreState>((set, get) => ({
 
   setVolume(v) {
     set({ volume: v });
+    saveState(get());
+  },
+
+  toggleBgMusic() {
+    const next = !get().bgMusicEnabled;
+    set({ bgMusicEnabled: next });
+    if (next) {
+      resumeAudio();
+      startBgMusic(get().bgMusicVolume);
+    } else {
+      stopBgMusic();
+    }
+    saveState(get());
+  },
+
+  setBgMusicVolume(v) {
+    set({ bgMusicVolume: v });
+    setBgMusicVolumeUtil(v);
     saveState(get());
   },
 
