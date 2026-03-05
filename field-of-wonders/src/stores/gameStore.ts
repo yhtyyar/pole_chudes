@@ -168,14 +168,19 @@ export const useGameStore = create<StoreState>((set, get) => ({
     resumeAudio();
     const now = Date.now();
 
-    // Build rounds — only include rounds that have a word (active rounds).
-    // Round index 5 is always the final. We remap ids to preserve order.
+    // Build rounds. If any round has isFinal property defined (even false),
+    // honour all isFinal values explicitly. Otherwise fall back to legacy
+    // behaviour: last round is final when there are > 1 rounds.
+    const totalFormRounds = form.rounds.length;
+    const anyHasIsFinalDefined = form.rounds.some((r) => 'isFinal' in r && r.isFinal !== undefined);
     const allRounds = form.rounds.map((r, i) => ({
       id: i,
       word: r.word.trim().toUpperCase(),
       question: r.question.trim(),
       completed: false,
-      isFinal: i === form.rounds.length - 1 && form.rounds.length > 1,
+      isFinal: anyHasIsFinalDefined
+        ? !!r.isFinal
+        : i === totalFormRounds - 1 && totalFormRounds > 1,
     }));
     // First active (non-empty) round word for the initial board
     const firstActive = allRounds.find((r) => r.word.length > 0);
@@ -630,9 +635,12 @@ export const useGameStore = create<StoreState>((set, get) => ({
   markWinner() {
     const { currentRound, config, players, muted, volume } = get();
     const isFinal = !!config.rounds[currentRound]?.isFinal;
-    const roundPlayers = players.filter((p) =>
-      isFinal ? p.id.startsWith('final_') : p.group === currentRound + 1
-    );
+    const finalPlayers = players.filter((p) => p.id.startsWith('final_'));
+    // final_ players exist only when startFinal was called (multi-round game).
+    // In final-only mode the round is isFinal but uses regular group players.
+    const roundPlayers = isFinal && finalPlayers.length > 0
+      ? finalPlayers
+      : players.filter((p) => p.group === currentRound + 1);
     const cp = roundPlayers[get().turn.currentPlayerIndex];
     if (!cp) return;
     if (!muted) sounds.win(volume);

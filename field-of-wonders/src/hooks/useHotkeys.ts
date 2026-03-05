@@ -26,7 +26,10 @@ export function useHotkeys() {
       switch (e.code) {
         case 'Space':
           e.preventDefault();
-          if (turn.phase === 'spin' && !turn.drumSpinning) spinDrumAction();
+          if (turn.phase === 'spin' && !turn.drumSpinning) {
+            // Dispatch custom event — Drum component listens and runs its full handleSpin
+            window.dispatchEvent(new CustomEvent('drum:spin'));
+          }
           break;
         case 'Enter':
           e.preventDefault();

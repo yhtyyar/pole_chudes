@@ -95,5 +95,5 @@ export interface SetupForm {
   playerNames: string[][];
   /** Число игроков в каждой группе (по умолчанию 5) */
   playersPerGroup: number[];
-  rounds: Array<{ word: string; question: string }>;
+  rounds: Array<{ word: string; question: string; isFinal?: boolean }>;
 }

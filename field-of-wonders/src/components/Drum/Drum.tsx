@@ -224,6 +224,14 @@ export function Drum() {
 
   const canSpin = phase === 'spin' && !drumSpinning;
 
+  // Listen for Space hotkey event dispatched by useHotkeys
+  useEffect(() => {
+    const onSpinEvent = () => handleSpin();
+    window.addEventListener('drum:spin', onSpinEvent);
+    return () => window.removeEventListener('drum:spin', onSpinEvent);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSpin]);
+
   // Handle spin: select sector, open fullscreen, trigger store action, start animation
   function handleSpin() {
     if (!canSpin) return;
@@ -306,7 +314,7 @@ export function Drum() {
 
   return (
     <>
-      {/* ── Sidebar drum ── */}
+      {/* ── Sidebar drum (desktop) ── */}
       <div className="flex flex-col items-center gap-4">
         {smallWheel}
 

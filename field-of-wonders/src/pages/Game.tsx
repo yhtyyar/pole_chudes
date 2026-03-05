@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check, RefreshCw, Music, AlertCircle } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check, RefreshCw, Music, AlertCircle, Disc3 } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
 import { Board } from '../components/Board/Board';
 import { Drum } from '../components/Drum/Drum';
@@ -44,6 +44,7 @@ export function Game() {
   const [editingName, setEditingName] = useState('');
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showMobileDrum, setShowMobileDrum] = useState(false);
 
   const isFinal        = gameStatus === 'final' || config.rounds[currentRound]?.isFinal;
   const isRoundComplete = gameStatus === 'roundComplete';
@@ -326,7 +327,7 @@ export function Game() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left panel: Letter input + Admin */}
         <aside
-          className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r flex flex-col gap-3 p-4 overflow-y-auto flex-shrink-0"
+          className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r flex flex-col gap-3 p-4 overflow-y-auto flex-shrink-0 pb-24 lg:pb-4"
           style={{ background: 'var(--color-panel)', borderColor: 'var(--color-border)' }}
         >
           {/* Current player indicator */}
@@ -404,9 +405,9 @@ export function Game() {
           </div>
         </main>
 
-        {/* Right panel: Drum + Timer */}
+        {/* Right panel: Drum + Timer (desktop only) */}
         <aside
-          className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l flex flex-col items-center gap-4 p-4 overflow-y-auto flex-shrink-0"
+          className="hidden lg:flex w-full lg:w-96 border-t lg:border-t-0 lg:border-l flex-col items-center gap-4 p-4 overflow-y-auto flex-shrink-0"
           style={{ background: 'var(--color-panel)', borderColor: 'var(--color-border)' }}
         >
           <Drum />
@@ -418,6 +419,71 @@ export function Game() {
           </div>
         </aside>
       </div>
+
+      {/* ══ MOBILE DRUM FAB (only on small screens) ═══════════════════ */}
+      {gameStatus === 'playing' && (
+        <div className="lg:hidden">
+          {/* Floating spin button */}
+          <button
+            onClick={() => {
+              if (turn.phase === 'spin' && !turn.drumSpinning) {
+                window.dispatchEvent(new CustomEvent('drum:spin'));
+              } else {
+                setShowMobileDrum(true);
+              }
+            }}
+            className="fixed bottom-5 right-5 z-40 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95"
+            style={{
+              background: turn.phase === 'spin' && !turn.drumSpinning
+                ? 'linear-gradient(135deg,#e94560,#c2304a)'
+                : 'var(--color-card)',
+              border: '2px solid',
+              borderColor: turn.phase === 'spin' && !turn.drumSpinning ? '#e94560' : 'var(--color-border)',
+              boxShadow: turn.phase === 'spin' && !turn.drumSpinning
+                ? '0 0 24px rgba(233,69,96,0.55)'
+                : '0 4px 20px rgba(0,0,0,0.4)',
+            }}
+            title="Крутить барабан"
+            aria-label="Крутить барабан"
+          >
+            <Disc3
+              className={`w-7 h-7 ${turn.drumSpinning ? 'animate-spin' : ''}`}
+              style={{ color: turn.phase === 'spin' && !turn.drumSpinning ? '#fff' : 'var(--color-text-muted)' }}
+            />
+          </button>
+
+          {/* Mobile drum bottom sheet */}
+          <AnimatePresence>
+            {showMobileDrum && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+                onClick={() => setShowMobileDrum(false)}
+              >
+                <motion.div
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-0 left-0 right-0 rounded-t-3xl pt-4 pb-8 px-4 flex flex-col items-center gap-4"
+                  style={{ background: 'var(--color-panel)', borderTop: '2px solid var(--color-border)' }}
+                >
+                  {/* Drag handle */}
+                  <div className="w-10 h-1 rounded-full mb-2" style={{ background: 'var(--color-border)' }} />
+                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Барабан</p>
+                  <Drum />
+                  <div className="w-full border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
+                    <Timer />
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* ══ RESTART MODAL ════════════════════════════════════════════════ */}
       <AnimatePresence>

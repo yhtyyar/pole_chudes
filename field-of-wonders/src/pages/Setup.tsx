@@ -6,7 +6,7 @@ import { loadKnownPlayers, searchKnownPlayers } from '../utils/knownPlayers';
 import type { SetupForm, KnownPlayer } from '../types';
 import {
   Sun, Moon, Music, VolumeX, ChevronDown, ChevronUp,
-  Users, FileText, X, Plus, Minus, UserPlus, UserMinus,
+  Users, FileText, X, Plus, Minus, UserPlus, UserMinus, Trophy,
 } from 'lucide-react';
 
 const DEFAULT_PLAYERS_PER_GROUP = 5;
@@ -14,6 +14,8 @@ const MIN_PLAYERS = 1;
 const MAX_PLAYERS = 10;
 const MIN_GROUPS = 1;
 const MAX_GROUPS = 8;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 8;
 
 function makeDefaultPlayerNames(groupCount: number, playersPerGroup: number[]): string[][] {
   return Array.from({ length: groupCount }, (_, gi) =>
@@ -23,12 +25,14 @@ function makeDefaultPlayerNames(groupCount: number, playersPerGroup: number[]): 
 
 const INITIAL_GROUPS = ['Группа 1', 'Группа 2', 'Группа 3', 'Группа 4', 'Группа 5'];
 const INITIAL_PPG = INITIAL_GROUPS.map(() => DEFAULT_PLAYERS_PER_GROUP);
-// 5 regular rounds + 1 final
-const DEFAULT_ROUNDS = Array.from({ length: 6 }, () => ({ word: '', question: '' }));
+// 5 regular rounds
+const DEFAULT_REGULAR_ROUNDS = Array.from({ length: 5 }, () => ({ word: '', question: '' }));
+const DEFAULT_FINAL_ROUND = { word: '', question: '' };
 
 interface FieldErrors {
   groups: string[];
   rounds: Array<{ word?: string; question?: string }>;
+  finalRound?: { word?: string; question?: string };
 }
 
 // ── PlayerNameInput ───────────────────────────────────────────────────────────
@@ -226,56 +230,91 @@ export function Setup() {
   const toggleBgMusic = useGameStore((s) => s.toggleBgMusic);
   const setBgMusicVolumeAction = useGameStore((s) => s.setBgMusicVolume);
 
+  const [regularRounds, setRegularRounds] = useState(DEFAULT_REGULAR_ROUNDS.map((r) => ({ ...r })));
+  const [finalRound, setFinalRound] = useState<{ word: string; question: string } | null>({ ...DEFAULT_FINAL_ROUND });
   const [form, setForm] = useState<SetupForm>({
     groups: [...INITIAL_GROUPS],
     playerNames: makeDefaultPlayerNames(INITIAL_GROUPS.length, INITIAL_PPG),
     playersPerGroup: [...INITIAL_PPG],
-    rounds: DEFAULT_ROUNDS.map((r) => ({ ...r })),
+    rounds: [...DEFAULT_REGULAR_ROUNDS.map((r) => ({ ...r, isFinal: false as const })), { ...DEFAULT_FINAL_ROUND, isFinal: true as const }],
   });
   const [errors, setErrors] = useState<FieldErrors>({ groups: [], rounds: [] });
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
 
+  // Sync form.rounds whenever regularRounds or finalRound changes
+  function buildRounds(regs: typeof regularRounds, fin: typeof finalRound) {
+    if (fin) return [...regs, { ...fin, isFinal: true }];
+    return regs.map((r) => ({ ...r, isFinal: false as const }));
+  }
+
   const hasSaved = !!localStorage.getItem('pole_chudes_state');
   const { theme, toggle: toggleTheme } = useTheme();
   const isLight = theme === 'light';
 
   // ── Derived ──
-  const totalRounds = form.rounds.length;
-  const finalRoundIndex = totalRounds - 1;
+  const hasFinal = finalRound !== null;
+  const activeRegularRounds = regularRounds.filter((r) => r.word.trim().length > 0).length;
 
-  // Active rounds = those with a non-empty word (excluding final)
-  const activeRegularRounds = form.rounds
-    .slice(0, finalRoundIndex)
-    .filter((r) => r.word.trim().length > 0).length;
-
-  // ── Validation ──
-  function validate(): boolean {
-    const groupErrs: string[] = form.groups.map((g) => validateGroupName(g) ?? '');
-    // Only validate rounds that have a word filled in (or the final round)
-    const roundErrs = form.rounds.map((r, i) => {
-      const isFinal = i === finalRoundIndex;
-      if (!isFinal && !r.word.trim()) return {}; // skipped round — no error
+  function handleStart() {
+    const rounds = buildRounds(regularRounds, finalRound);
+    const updatedForm = { ...form, rounds };
+    setForm(updatedForm);
+    // validate directly against current state
+    const groupErrs: string[] = updatedForm.groups.map((g) => validateGroupName(g) ?? '');
+    const roundErrs = regularRounds.map((r) => {
+      if (!r.word.trim()) return {};
       return {
         word: validateCyrillicWord(r.word) ?? undefined,
         question: validateQuestion(r.question) ?? undefined,
       };
     });
-    setErrors({ groups: groupErrs, rounds: roundErrs });
-    // Need at least one non-final round filled OR only final
+    const finalErr = finalRound && finalRound.word.trim()
+      ? { word: validateCyrillicWord(finalRound.word) ?? undefined, question: validateQuestion(finalRound.question) ?? undefined }
+      : undefined;
+    setErrors({ groups: groupErrs, rounds: roundErrs, finalRound: finalErr });
     const hasAtLeastOneRound =
-      form.rounds.some((r, i) => i !== finalRoundIndex && r.word.trim().length > 0) ||
-      form.rounds[finalRoundIndex]?.word.trim().length > 0;
-    return (
+      regularRounds.some((r) => r.word.trim().length > 0) ||
+      (finalRound !== null && finalRound.word.trim().length > 0);
+    const ok =
       groupErrs.every((e) => !e) &&
       roundErrs.every((r) => !r.word && !r.question) &&
-      hasAtLeastOneRound
-    );
+      (!finalErr || (!finalErr.word && !finalErr.question)) &&
+      hasAtLeastOneRound;
+    if (ok) startGame(updatedForm);
   }
 
-  function handleStart() {
-    if (validate()) startGame(form);
+  // ── Round management ──
+  function addRegularRound() {
+    if (regularRounds.length >= MAX_ROUNDS) return;
+    const newRegs = [...regularRounds, { word: '', question: '' }];
+    setRegularRounds(newRegs);
+    setForm((f) => ({ ...f, rounds: buildRounds(newRegs, finalRound) }));
+  }
+
+  function removeRegularRound(i: number) {
+    if (regularRounds.length <= MIN_ROUNDS) return;
+    const newRegs = regularRounds.filter((_, idx) => idx !== i);
+    setRegularRounds(newRegs);
+    setForm((f) => ({ ...f, rounds: buildRounds(newRegs, finalRound) }));
+  }
+
+  function updateRegularRound(i: number, r: { word: string; question: string }) {
+    const newRegs = regularRounds.map((old, idx) => (idx === i ? r : old));
+    setRegularRounds(newRegs);
+    setForm((f) => ({ ...f, rounds: buildRounds(newRegs, finalRound) }));
+  }
+
+  function toggleFinal() {
+    const newFinal = hasFinal ? null : { word: '', question: '' };
+    setFinalRound(newFinal);
+    setForm((f) => ({ ...f, rounds: buildRounds(regularRounds, newFinal) }));
+  }
+
+  function updateFinalRound(r: { word: string; question: string }) {
+    setFinalRound(r);
+    setForm((f) => ({ ...f, rounds: buildRounds(regularRounds, r) }));
   }
 
   // ── Group management ──
@@ -450,7 +489,7 @@ export function Setup() {
 
       {/* ── Body ── */}
       <div className="flex-1 overflow-y-auto px-4 py-6 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
           {/* ── Column 1: Groups + Players ── */}
           <section className="space-y-4">
@@ -517,62 +556,97 @@ export function Setup() {
             ))}
           </section>
 
-          {/* ── Column 2: Rounds 1–3 ── */}
+          {/* ── Column 2: Rounds + Final ── */}
           <section className="space-y-4">
-            <div>
+            {/* Rounds header */}
+            <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <span className="text-xl">📝</span> Слова и вопросы (1–3)
+                <span className="text-xl">📝</span> Раунды
               </h2>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                Оставьте слово пустым, чтобы пропустить раунд.
-              </p>
+              <div className="flex items-center gap-2">
+                {regularRounds.length < MAX_ROUNDS && (
+                  <button
+                    type="button"
+                    onClick={addRegularRound}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
+                    style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+                  >
+                    <Plus className="w-3 h-3" /> Раунд
+                  </button>
+                )}
+              </div>
             </div>
-            {form.rounds.slice(0, 3).map((round, i) => (
-              <RoundCard
-                key={i}
-                index={i}
-                round={round}
-                error={errors.rounds[i]}
-                isFinalRound={false}
-                onChange={(r) => {
-                  const rounds = [...form.rounds];
-                  rounds[i] = r;
-                  setForm({ ...form, rounds });
-                }}
-              />
-            ))}
-          </section>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Оставьте слово пустым, чтобы пропустить раунд. Мин. 1, макс. {MAX_ROUNDS} раундов.
+            </p>
 
-          {/* ── Column 3: Rounds 4–5 + Final ── */}
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <span className="text-xl">🏆</span> Слова и вопросы (4–5 + Финал)
-              </h2>
-              {activeRegularRounds === 0 && form.rounds[finalRoundIndex]?.word && (
-                <p className="text-xs mt-1 text-gold">
-                  💡 Все раунды пропущены — будет сыгран только финал.
-                </p>
-              )}
-            </div>
-            {form.rounds.slice(3).map((round, j) => {
-              const i = j + 3;
-              const isFinal = i === finalRoundIndex;
-              return (
+            {regularRounds.map((round, i) => (
+              <div key={i} className="relative">
                 <RoundCard
-                  key={i}
                   index={i}
                   round={round}
                   error={errors.rounds[i]}
-                  isFinalRound={isFinal}
-                  onChange={(r) => {
-                    const rounds = [...form.rounds];
-                    rounds[i] = r;
-                    setForm({ ...form, rounds });
-                  }}
+                  isFinalRound={false}
+                  onChange={(r) => updateRegularRound(i, r)}
                 />
-              );
-            })}
+                {regularRounds.length > MIN_ROUNDS && (
+                  <button
+                    type="button"
+                    onClick={() => removeRegularRound(i)}
+                    title="Удалить раунд"
+                    className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-lg text-error hover:bg-error/15 transition-colors"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {/* Final round toggle */}
+            <div
+              className="rounded-xl border p-4"
+              style={{ borderColor: hasFinal ? 'rgba(245,197,66,0.4)' : 'var(--color-border)', background: 'var(--color-card)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="flex items-center gap-2 text-sm font-bold">
+                  <Trophy className="w-4 h-4 text-gold" />
+                  <span className="text-gold">Финальный раунд</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={toggleFinal}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    hasFinal ? 'bg-gold' : 'bg-[var(--color-border)]'
+                  }`}
+                  title={hasFinal ? 'Убрать финал' : 'Добавить финал'}
+                  aria-pressed={hasFinal}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                      hasFinal ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              {hasFinal && finalRound ? (
+                <>
+                  {activeRegularRounds === 0 && (
+                    <p className="text-xs mb-3 text-gold">💡 Все раунды пропущены — будет сыгран только финал.</p>
+                  )}
+                  <RoundCard
+                    index={regularRounds.length}
+                    round={finalRound}
+                    error={errors.finalRound}
+                    isFinalRound={true}
+                    onChange={updateFinalRound}
+                  />
+                </>
+              ) : (
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Финальный раунд отключён. Нажмите переключатель, чтобы добавить.
+                </p>
+              )}
+            </div>
           </section>
         </div>
       </div>
@@ -587,7 +661,7 @@ export function Setup() {
             {/* Summary badge */}
             <span className="text-xs px-2.5 py-1 rounded-full"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
-              {form.groups.length} групп · {form.playersPerGroup.reduce((s, n) => s + n, 0)} игроков · {activeRegularRounds + (form.rounds[finalRoundIndex]?.word ? 1 : 0)} раундов
+              {form.groups.length} групп · {form.playersPerGroup.reduce((s, n) => s + n, 0)} игроков · {activeRegularRounds + (hasFinal && finalRound?.word ? 1 : 0)} раундов
             </span>
 
             <button
