@@ -33,8 +33,7 @@ export type DrumSector =
   | { type: 'double' }
   | { type: 'extra' }
   | { type: 'bankrupt' }
-  | { type: 'prize' }
-  | { type: 'bank' };
+  | { type: 'prize' };
 
 export interface TurnState {
   currentPlayerIndex: number;

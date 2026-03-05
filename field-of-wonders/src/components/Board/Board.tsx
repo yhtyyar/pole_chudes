@@ -37,7 +37,7 @@ export function Board() {
   const showWord = gameStatus === 'roundComplete' || gameStatus === 'gameComplete';
 
   return (
-    <div className="flex flex-col items-center gap-4 py-6">
+    <div data-testid="board" className="flex flex-col items-center gap-4 py-6">
       {rows.map((row, ri) => (
         <div key={ri} className="flex gap-2.5 justify-center flex-wrap">
           {row.map(({ letter, revealed, index }) => {
@@ -45,6 +45,8 @@ export function Board() {
             return (
               <motion.div
                 key={index}
+                data-testid={`board-cell-${index}`}
+                data-revealed={isOpen}
                 className={`board-cell ${isOpen ? 'board-cell-open' : 'board-cell-closed'}`}
                 style={{ width: cellW, height: cellH }}
                 initial={false}

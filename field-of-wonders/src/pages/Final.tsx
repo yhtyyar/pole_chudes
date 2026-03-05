@@ -80,6 +80,7 @@ export function Final() {
 
   return (
     <div
+      data-testid="final-page"
       className="min-h-screen flex flex-col items-center p-6 lg:p-10 relative overflow-hidden"
       style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
     >
@@ -111,6 +112,7 @@ export function Final() {
         {/* ── Grand winner card ── */}
         {finalWinner && (
           <motion.div
+            data-testid="final-winner-card"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -294,12 +296,14 @@ export function Final() {
             <Download className="w-4 h-4" /> Сохранить результаты
           </button>
           <button
+            data-testid="repeat-game-btn"
             onClick={restartGame}
             className="px-6 py-2.5 rounded-xl border-2 border-gold/50 bg-gold/10 text-gold font-bold text-sm transition-all hover:bg-gold/20 active:scale-95 flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" /> Повторить игру
           </button>
           <button
+            data-testid="new-game-btn"
             onClick={resetGame}
             className="px-6 py-2.5 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-sm uppercase tracking-wider shadow-[0_0_16px_rgba(233,69,96,0.35)] transition-all active:scale-95 flex items-center gap-2"
           >

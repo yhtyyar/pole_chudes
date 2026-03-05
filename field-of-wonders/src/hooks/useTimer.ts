@@ -8,7 +8,7 @@ export function useTimer() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (timerRunning && gameStatus === 'playing') {
+    if (timerRunning && (gameStatus === 'playing' || gameStatus === 'final')) {
       intervalRef.current = setInterval(() => {
         tickTimer();
       }, 1000);

@@ -26,10 +26,10 @@ function makeDefaultPlayerNames(groupCount: number, playersPerGroup: number[]): 
   );
 }
 
-const INITIAL_GROUPS = ['Группа 1', 'Группа 2', 'Группа 3', 'Группа 4', 'Группа 5'];
+const INITIAL_GROUPS = ['Группа 1', 'Группа 2', 'Группа 3'];
 const INITIAL_PPG = INITIAL_GROUPS.map(() => DEFAULT_PLAYERS_PER_GROUP);
-// 5 regular rounds
-const DEFAULT_REGULAR_ROUNDS = Array.from({ length: 5 }, () => ({ word: '', question: '' }));
+// 3 regular rounds by default
+const DEFAULT_REGULAR_ROUNDS = Array.from({ length: 3 }, () => ({ word: '', question: '' }));
 const DEFAULT_FINAL_ROUND = { word: '', question: '' };
 
 interface FieldErrors {
@@ -193,6 +193,7 @@ function RoundCard({
           Слово (3–15 букв){!isFinalRound && <span className="text-[var(--color-text-muted)] ml-1">(оставьте пустым, чтобы пропустить раунд)</span>}
         </label>
         <input
+          data-testid={isFinalRound ? 'final-word-input' : `round-word-input-${index}`}
           type="text"
           value={round.word}
           onChange={(e) => onChange({ ...round, word: e.target.value.toUpperCase() })}
@@ -210,6 +211,7 @@ function RoundCard({
           Вопрос-загадка
         </label>
         <textarea
+          data-testid={isFinalRound ? 'final-question-input' : `round-question-input-${index}`}
           value={round.question}
           onChange={(e) => onChange({ ...round, question: e.target.value })}
           className={`w-full input-field resize-none h-16 text-sm ${
@@ -457,7 +459,7 @@ export function Setup() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    <div data-testid="setup-page" className="min-h-screen flex flex-col" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
 
       {/* ── Header ── */}
       <header
@@ -509,6 +511,7 @@ export function Setup() {
 
           {hasSaved && (
             <button
+              data-testid="continue-game-btn"
               onClick={() => loadSavedState()}
               className="px-4 py-2 rounded-xl bg-success/20 border border-success/40 text-success font-semibold hover:bg-success/30 transition-colors text-sm"
             >
@@ -598,6 +601,7 @@ export function Setup() {
                   </h2>
                   {form.groups.length < MAX_GROUPS && (
                     <button
+                      data-testid="add-group-btn"
                       type="button"
                       onClick={addGroup}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
@@ -622,6 +626,7 @@ export function Setup() {
                         {i + 1}
                       </span>
                       <input
+                        data-testid={`group-name-input-${i}`}
                         type="text"
                         value={group}
                         onChange={(e) => updateGroupName(i, e.target.value)}
@@ -630,6 +635,7 @@ export function Setup() {
                       />
                       {form.groups.length > MIN_GROUPS && (
                         <button
+                          data-testid={`remove-group-btn-${i}`}
                           type="button"
                           onClick={() => removeGroup(i)}
                           title="Удалить группу"
@@ -667,6 +673,7 @@ export function Setup() {
               <div className="flex items-center gap-2">
                 {regularRounds.length < MAX_ROUNDS && (
                   <button
+                    data-testid="add-round-btn"
                     type="button"
                     onClick={addRegularRound}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
@@ -692,6 +699,7 @@ export function Setup() {
                 />
                 {regularRounds.length > MIN_ROUNDS && (
                   <button
+                    data-testid={`remove-round-btn-${i}`}
                     type="button"
                     onClick={() => removeRegularRound(i)}
                     title="Удалить раунд"
@@ -714,6 +722,7 @@ export function Setup() {
                   <span className="text-gold">Финальный раунд</span>
                 </span>
                 <button
+                  data-testid="final-toggle"
                   type="button"
                   onClick={toggleFinal}
                   className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
@@ -792,6 +801,7 @@ export function Setup() {
           </div>
 
           <button
+            data-testid="start-game-btn"
             type="button"
             onClick={handleStart}
             className="px-8 py-3 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-base uppercase tracking-widest shadow-[0_0_25px_rgba(233,69,96,0.4)] transition-all active:scale-95"

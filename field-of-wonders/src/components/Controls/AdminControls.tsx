@@ -56,6 +56,7 @@ export function AdminControls() {
             <SectionLabel>Смена игрока</SectionLabel>
             <div className="grid grid-cols-2 gap-2">
               <button
+                data-testid="prev-player-btn"
                 onClick={previousPlayer}
                 disabled={!isPlaying}
                 title="Вернуться к предыдущему игроку (если не успели записать букву)"
@@ -65,6 +66,7 @@ export function AdminControls() {
                 <ArrowLeft className="w-3.5 h-3.5" /> Предыдущий
               </button>
               <button
+                data-testid="next-player-btn"
                 onClick={nextPlayer}
                 disabled={!isPlaying}
                 title="Передать ход следующему игроку"
@@ -84,6 +86,7 @@ export function AdminControls() {
             <SectionLabel>Исход хода</SectionLabel>
             <div className="grid grid-cols-2 gap-2">
               <button
+                data-testid="force-bankrupt-btn"
                 onClick={forceBankrupt}
                 disabled={!isPlaying}
                 title="Засчитать банкрот текущему игроку — очки раунда сгорают"
@@ -92,6 +95,7 @@ export function AdminControls() {
                 <Skull className="w-3.5 h-3.5" /> Банкрот
               </button>
               <button
+                data-testid="mark-winner-btn"
                 onClick={markWinner}
                 disabled={!isPlaying}
                 title="Объявить текущего игрока победителем раунда"
@@ -110,14 +114,14 @@ export function AdminControls() {
                 <>
                   <button
                     onClick={startTimer}
-                    title="Запустить таймер с 15 секунд"
+                    title="Запустить таймер с 20 секунд"
                     className="btn-admin flex-1 bg-success/15 border-success/35 text-success hover:bg-success/25 flex items-center justify-center gap-1 text-xs"
                   >
                     <Timer className="w-3.5 h-3.5" /> Запустить
                   </button>
                   <button
                     onClick={resumeTimer}
-                    disabled={turn.timer >= 15}
+                    disabled={turn.timer >= 20}
                     title="Продолжить остановленный таймер"
                     className="btn-admin flex-1 bg-success/10 border-success/25 text-success hover:bg-success/20 flex items-center justify-center gap-1 text-xs disabled:opacity-30"
                   >
@@ -143,7 +147,7 @@ export function AdminControls() {
               </button>
               <button
                 onClick={resetTimer}
-                title="Сбросить таймер до 15 секунд"
+                title="Сбросить таймер до 20 секунд"
                 className="btn-admin bg-[var(--color-card)] border-[var(--color-border)] hover:opacity-80 flex items-center gap-1 text-xs"
                 style={{ color: 'var(--color-text-muted)' }}
               >
@@ -160,6 +164,7 @@ export function AdminControls() {
             <SectionLabel>Открыть букву вручную</SectionLabel>
             <div className="flex gap-2">
               <input
+                data-testid="reveal-letter-input"
                 type="text"
                 maxLength={1}
                 value={revealLetter}
@@ -172,6 +177,7 @@ export function AdminControls() {
                 style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
               />
               <button
+                data-testid="reveal-letter-btn"
                 onClick={() => { if (revealLetter) { forceRevealLetter(revealLetter); setRevealLetter(''); } }}
                 disabled={!revealLetter}
                 className="btn-admin flex-1 bg-accent/15 border-accent/35 text-accent hover:bg-accent/25 disabled:opacity-40 flex items-center justify-center gap-1 text-xs"

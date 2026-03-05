@@ -16,12 +16,12 @@ export const DRUM_SECTORS: Array<{ sector: DrumSector; weight: number }> = [
   { sector: { type: 'points', value: 350 }, weight: 5 },
   { sector: { type: 'points', value: 400 }, weight: 4 },
   { sector: { type: 'points', value: 500 }, weight: 3 },
+  { sector: { type: 'points', value: 600 }, weight: 3 },
   { sector: { type: 'points', value: 1000 }, weight: 1 },
   { sector: { type: 'double' }, weight: 4 },
   { sector: { type: 'extra' }, weight: 4 },
   { sector: { type: 'bankrupt' }, weight: 5 },
   { sector: { type: 'prize' }, weight: 2 },
-  { sector: { type: 'bank' }, weight: 3 },
 ];
 
 // Exported for testing
@@ -47,10 +47,12 @@ export function spinDrumWithSeed(rand: number): DrumSector {
 }
 
 
+export const DEFAULT_TIMER = 20;
+
 function makeInitialTurn(): GameState['turn'] {
   return {
     currentPlayerIndex: 0,
-    timer: 15,
+    timer: DEFAULT_TIMER,
     timerRunning: false,
     sector: null,
     drumSpinning: false,
@@ -311,7 +313,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
     if (sector.type === 'bankrupt') {
       if (!muted) sounds.bankrupt(volume);
       set((s) => {
-        // BUG FIX: use same isFinal-aware filter as everywhere else
         const isFinal = !!s.config.rounds[s.currentRound]?.isFinal;
         const roundPlayers = s.players.filter((p) =>
           isFinal ? p.id.startsWith('final_') : p.group === s.currentRound + 1
@@ -323,6 +324,7 @@ export const useGameStore = create<StoreState>((set, get) => ({
             drumSpinning: false,
             sector,
             phase: 'result',
+            timerRunning: false,
             bankAmount: 0,
           },
           players: s.players.map((p) =>
@@ -339,36 +341,25 @@ export const useGameStore = create<StoreState>((set, get) => ({
           ...s.turn,
           drumSpinning: false,
           sector,
-          phase: 'input',   // ведущий может ввести букву или нажать "следующий"
-          timerRunning: true,
-          timer: 15,
-        },
-      }));
-    } else if (sector.type === 'bank') {
-      set((s) => ({
-        turn: {
-          ...s.turn,
-          drumSpinning: false,
-          sector,
           phase: 'input',
           timerRunning: true,
-          timer: 15,
+          timer: DEFAULT_TIMER,
         },
       }));
     } else if (sector.type === 'double') {
       if (!muted) sounds.double(volume);
       set((s) => ({
-        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: DEFAULT_TIMER },
       }));
     } else if (sector.type === 'extra') {
       if (!muted) sounds.extra(volume);
       set((s) => ({
-        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: DEFAULT_TIMER },
       }));
     } else {
       // points → enter letter
       set((s) => ({
-        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: 15 },
+        turn: { ...s.turn, drumSpinning: false, sector, phase: 'input', timerRunning: true, timer: DEFAULT_TIMER },
       }));
     }
 
@@ -432,8 +423,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
           gain = sector.value * positions.length;
         } else if (sector.type === 'double') {
           gain = cp?.roundScore ?? 0; // will double below
-        } else if (sector.type === 'bank') {
-          gain = s.turn.bankAmount + 100 * positions.length;
         } else {
           // 'extra' or 'prize' — fixed 100 per letter
           gain = 100 * positions.length;
@@ -469,7 +458,7 @@ export const useGameStore = create<StoreState>((set, get) => ({
         phase: newPhase,
         sector: allRevealed ? s.turn.sector : null,
         extraTurn: false,
-        bankAmount: sector?.type === 'bank' ? 0 : s.turn.bankAmount,
+        bankAmount: 0,
       };
 
       return {
@@ -578,7 +567,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
       const unrevealedCount = s.board.revealed.filter((r) => !r).length;
       if (sector) {
         if (sector.type === 'points') gain = sector.value * unrevealedCount;
-        else if (sector.type === 'bank') gain = s.turn.bankAmount + 100 * unrevealedCount;
         else gain = 100 * unrevealedCount;
       }
 
@@ -763,11 +751,11 @@ export const useGameStore = create<StoreState>((set, get) => ({
   },
 
   resetTimer() {
-    set((s) => ({ turn: { ...s.turn, timer: 15, timerRunning: false } }));
+    set((s) => ({ turn: { ...s.turn, timer: DEFAULT_TIMER, timerRunning: false } }));
   },
 
   startTimer() {
-    set((s) => ({ turn: { ...s.turn, timer: 15, timerRunning: true } }));
+    set((s) => ({ turn: { ...s.turn, timer: DEFAULT_TIMER, timerRunning: true } }));
   },
 
   extendTimer(secs) {

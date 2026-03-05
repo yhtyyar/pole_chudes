@@ -192,6 +192,7 @@ export function Game() {
 
             {/* Full reset */}
             <button
+              data-testid="reset-game-btn"
               onClick={() => setShowResetModal(true)}
               title="Сбросить игру"
               className="text-sm px-2.5 py-1.5 rounded-lg transition-colors hover:text-error"
@@ -515,6 +516,7 @@ export function Game() {
                   Отмена
                 </button>
                 <button
+                  data-testid="confirm-restart-btn"
                   onClick={() => { restartGame(); setShowRestartModal(false); }}
                   className="flex-1 py-2.5 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-sm transition-all active:scale-95"
                 >
@@ -555,6 +557,7 @@ export function Game() {
                   Отмена
                 </button>
                 <button
+                  data-testid="confirm-reset-btn"
                   onClick={() => { resetGame(); setShowResetModal(false); }}
                   className="flex-1 py-2.5 rounded-xl bg-error hover:bg-error/80 text-white font-bold text-sm transition-all active:scale-95"
                 >
@@ -570,6 +573,7 @@ export function Game() {
       <AnimatePresence>
         {isRoundComplete && (
           <motion.div
+            data-testid="round-complete-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -615,6 +619,7 @@ export function Game() {
               <div className="flex flex-col gap-3">
                 {!isFinal && !isLastRegularRound && (
                   <button
+                    data-testid="next-round-btn"
                     onClick={startNextRound}
                     className="w-full py-4 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(233,69,96,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
@@ -623,6 +628,7 @@ export function Game() {
                 )}
                 {!isFinal && isLastRegularRound && hasFinalRound && (
                   <button
+                    data-testid="start-final-btn"
                     onClick={startFinal}
                     className="w-full py-4 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,66,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
                   >

@@ -19,26 +19,25 @@ const getSectorColor = (type: string): string => {
     case 'extra': return styles.getPropertyValue('--drum-extra').trim() || '#06b6d4';
     case 'bankrupt': return styles.getPropertyValue('--drum-bankrupt').trim() || '#ef4444';
     case 'prize': return styles.getPropertyValue('--drum-prize').trim() || '#f5c542';
-    case 'bank': return styles.getPropertyValue('--drum-bank').trim() || '#10b981';
     default: return '#3b82f6';
   }
 };
 
 const SECTORS: Array<{ label: string; colorType: string; sector: DrumSector }> = [
-  { label: '100',    colorType: 'points', sector: { type: 'points', value: 100 } },
-  { label: '150',    colorType: 'points-alt', sector: { type: 'points', value: 150 } },
-  { label: '200',    colorType: 'points', sector: { type: 'points', value: 200 } },
-  { label: '250',    colorType: 'points', sector: { type: 'points', value: 250 } },
+  { label: '100',    colorType: 'points',      sector: { type: 'points', value: 100 } },
+  { label: '150',    colorType: 'points-alt',  sector: { type: 'points', value: 150 } },
+  { label: '200',    colorType: 'points',      sector: { type: 'points', value: 200 } },
+  { label: '250',    colorType: 'points',      sector: { type: 'points', value: 250 } },
   { label: '300',    colorType: 'points-high', sector: { type: 'points', value: 300 } },
   { label: '350',    colorType: 'points-high', sector: { type: 'points', value: 350 } },
-  { label: '400',    colorType: 'points', sector: { type: 'points', value: 400 } },
-  { label: '500',    colorType: 'points', sector: { type: 'points', value: 500 } },
-  { label: '1000',   colorType: 'points-max', sector: { type: 'points', value: 1000 } },
-  { label: '×2',     colorType: 'double', sector: { type: 'double' } },
-  { label: '+1',     colorType: 'extra', sector: { type: 'extra' } },
-  { label: 'БАНКРОТ',colorType: 'bankrupt', sector: { type: 'bankrupt' } },
-  { label: 'ПРИЗ',   colorType: 'prize', sector: { type: 'prize' } },
-  { label: 'БАНК',   colorType: 'bank', sector: { type: 'bank' } },
+  { label: '400',    colorType: 'points',      sector: { type: 'points', value: 400 } },
+  { label: '500',    colorType: 'points',      sector: { type: 'points', value: 500 } },
+  { label: '600',    colorType: 'points-alt',  sector: { type: 'points', value: 600 } },
+  { label: '1000',   colorType: 'points-max',  sector: { type: 'points', value: 1000 } },
+  { label: '×2',     colorType: 'double',      sector: { type: 'double' } },
+  { label: '+1',     colorType: 'extra',       sector: { type: 'extra' } },
+  { label: 'БАНКРОТ',colorType: 'bankrupt',    sector: { type: 'bankrupt' } },
+  { label: 'ПРИЗ',   colorType: 'prize',       sector: { type: 'prize' } },
 ];
 
 const NUM_SECTORS = SECTORS.length;
@@ -49,7 +48,6 @@ function sectorColor(sector: DrumSector | null): string {
   if (!sector) return 'var(--color-text-muted)';
   if (sector.type === 'bankrupt') return 'var(--drum-bankrupt)';
   if (sector.type === 'prize')    return 'var(--drum-prize)';
-  if (sector.type === 'bank')     return 'var(--drum-bank)';
   if (sector.type === 'double')   return 'var(--drum-double)';
   if (sector.type === 'extra')    return 'var(--drum-extra)';
   if (sector.type === 'points')   return 'var(--drum-points)';
@@ -63,7 +61,6 @@ function sectorName(sector: DrumSector | null): string {
   if (sector.type === 'extra')    return '+1 Доп. буква';
   if (sector.type === 'bankrupt') return 'БАНКРОТ';
   if (sector.type === 'prize')    return 'ПРИЗ';
-  if (sector.type === 'bank')     return 'БАНК';
   return '';
 }
 
@@ -320,6 +317,7 @@ export function Drum() {
 
         {/* Result badge */}
         <motion.div
+          data-testid="drum-result"
           key={sector ? `sector-${sector.type}` : 'empty'}
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -349,6 +347,7 @@ export function Drum() {
 
         {/* Spin button */}
         <button
+          data-testid="spin-drum-btn"
           onClick={handleSpin}
           disabled={!canSpin}
           className={[

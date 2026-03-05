@@ -66,6 +66,7 @@ export function LetterInput() {
           </label>
           <div className="flex gap-2">
             <input
+              data-testid="letter-input"
               ref={letterRef}
               type="text"
               maxLength={1}
@@ -87,6 +88,7 @@ export function LetterInput() {
               }}
             />
             <button
+              data-testid="submit-letter-btn"
               onClick={submitLetter}
               disabled={!turn.pendingLetter}
               className={`flex-1 py-2 rounded-xl font-bold text-sm uppercase tracking-wide transition-all duration-200 active:scale-95 flex items-center justify-center gap-1.5 ${
@@ -108,6 +110,7 @@ export function LetterInput() {
           </label>
           <div className="flex gap-2">
             <input
+              data-testid="word-input"
               ref={wordRef}
               type="text"
               value={pendingWord}
@@ -128,6 +131,7 @@ export function LetterInput() {
               }}
             />
             <button
+              data-testid="submit-word-btn"
               onClick={() => { submitWord(pendingWord); setPendingWord(''); }}
               disabled={!pendingWord.trim()}
               className={`px-4 py-2 rounded-xl font-bold text-sm uppercase tracking-wide transition-all duration-200 active:scale-95 flex items-center justify-center gap-1.5 ${

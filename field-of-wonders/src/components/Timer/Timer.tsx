@@ -11,7 +11,7 @@ export function Timer() {
 
   const radius       = 44;
   const circumference = 2 * Math.PI * radius;
-  const progress     = timer / 15;
+  const progress     = timer / 20;
   const strokeDashoffset = circumference * (1 - progress);
 
   const isLow    = timer <= 5;
@@ -49,6 +49,7 @@ export function Timer() {
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
+            data-testid="timer-display"
             className={`text-4xl font-bold tabular-nums transition-colors duration-300 ${
               isDanger ? 'text-error animate-pulse' : isLow ? 'text-gold' : ''
             }`}
