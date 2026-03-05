@@ -1,19 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, RefreshCw, RotateCcw, Download } from 'lucide-react';
+import { Trophy, Medal, RefreshCw, RotateCcw, Download, Star } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
+import { loadAllTimeTop, saveGameResults } from '../utils/gameHistory';
 import type { GameTopEntry } from '../types';
+import type { HistoryEntry } from '../utils/gameHistory';
 
 const MEDAL_COLORS = ['#f5c542', '#b0b8c4', '#cd7f32'];
 const PLACE_LABELS = ['🥇', '🥈', '🥉'];
 
 export function Final() {
-  const players  = useGameStore((s) => s.players);
-  const config   = useGameStore((s) => s.config);
+  const players      = useGameStore((s) => s.players);
+  const config       = useGameStore((s) => s.config);
   const resetGame    = useGameStore((s) => s.resetGame);
   const restartGame  = useGameStore((s) => s.restartGame);
   const exportState  = useGameStore((s) => s.exportState);
+
+  const [allTimeTop, setAllTimeTop] = useState<HistoryEntry[]>([]);
 
   // ── Build full TOP across all non-final players (sorted by total score) ──
   const allRegularPlayers = players.filter((p) => !p.id.startsWith('final_'));
@@ -33,7 +37,31 @@ export function Final() {
     ? finalPlayers.reduce((best, p) => (p.score > best.score ? p : best), finalPlayers[0])
     : null;
 
+  // Resolve final winner's original group name
+  const finalWinnerGroupName = (() => {
+    if (!finalWinner) return '';
+    // final_ players have id = `final_<original_id>` e.g. final_g2p3
+    const originalId = finalWinner.id.replace(/^final_/, '');
+    const original = players.find((p) => p.id === originalId);
+    if (original) return config.groups[original.group - 1] || `Группа ${original.group}`;
+    return '';
+  })();
+
+  // ── Find final round word dynamically (not hardcoded index 5) ──
+  const finalRoundWord = config.rounds.find((r) => r.isFinal)?.word
+    ?? config.rounds[config.rounds.length - 1]?.word
+    ?? '—';
+
   useEffect(() => {
+    // Persist results to history on mount (handles cases where game ended via
+    // forceRevealLetter or other paths that didn't call saveGameResults yet)
+    if (topEntries.length > 0) {
+      saveGameResults(topEntries);
+    }
+    // Refresh all-time top after saving
+    setAllTimeTop(loadAllTimeTop(20));
+
+    // Confetti
     const duration = 5000;
     const end = Date.now() + duration;
     const frame = () => {
@@ -42,6 +70,7 @@ export function Final() {
       if (Date.now() < end) requestAnimationFrame(frame);
     };
     frame();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -88,12 +117,11 @@ export function Final() {
             </p>
             <p className="text-3xl font-bold mb-1">{finalWinner.name}</p>
             <p className="text-gold text-2xl font-bold">{finalWinner.score} очков</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-              {config.groups.find((_, i) => {
-                const orig = players.find((p) => `final_${p.id}` === finalWinner.id || p.id === finalWinner.id.replace('final_', ''));
-                return orig && orig.group === i + 1;
-              }) || ''}
-            </p>
+            {finalWinnerGroupName && (
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                {finalWinnerGroupName}
+              </p>
+            )}
           </motion.div>
         )}
 
@@ -106,7 +134,7 @@ export function Final() {
           style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)' }}
         >
           <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>Финальное слово</span>
-          <span className="text-xl font-bold text-gold tracking-widest">{config.rounds[5]?.word || '—'}</span>
+          <span className="text-xl font-bold text-gold tracking-widest">{finalRoundWord}</span>
         </motion.div>
 
         {/* ── Full TOP scoreboard ── */}
@@ -174,6 +202,71 @@ export function Final() {
                         {entry.totalScore}
                       </span>
                     </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── All-time TOP leaderboard ── */}
+        {allTimeTop.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.75 }}
+            className="rounded-2xl border mb-6 overflow-hidden"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <div
+              className="px-5 py-3 flex items-center gap-2 border-b"
+              style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)' }}
+            >
+              <Star className="w-4 h-4 text-gold" />
+              <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--color-text)' }}>
+                Зал Славы — лучшие за все игры
+              </h3>
+            </div>
+            <div style={{ background: 'var(--color-panel)' }}>
+              {allTimeTop.map((entry, i) => {
+                const isTop3 = i < 3;
+                const medalColor = MEDAL_COLORS[i] ?? 'var(--color-text-muted)';
+                return (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.8 + i * 0.03 }}
+                    className="flex items-center justify-between px-5 py-2.5 border-b last:border-b-0"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      background: isTop3 ? `${medalColor}0d` : undefined,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-lg w-7 flex-shrink-0 text-center">
+                        {i < 3 ? PLACE_LABELS[i] : (
+                          <span className="text-sm font-bold" style={{ color: 'var(--color-text-muted)' }}>{i + 1}</span>
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p
+                          className="font-semibold truncate text-sm"
+                          style={{ color: isTop3 ? medalColor : 'var(--color-text)' }}
+                        >
+                          {entry.name}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>
+                          {entry.groupName}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className="text-base font-black tabular-nums flex-shrink-0"
+                      style={{ color: isTop3 ? medalColor : 'var(--color-text)' }}
+                    >
+                      {entry.score}
+                    </span>
                   </motion.div>
                 );
               })}

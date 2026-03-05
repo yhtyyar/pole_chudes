@@ -4,6 +4,7 @@ import { saveState, loadState, clearState, exportState, importState } from '../u
 import { sounds, resumeAudio, startBgMusic, stopBgMusic, setBgMusicVolume as setBgMusicVolumeUtil } from '../utils/sounds';
 import { logEvent } from '../utils/gameLogger';
 import { saveKnownPlayers } from '../utils/knownPlayers';
+import { saveGameResults } from '../utils/gameHistory';
 
 // Drum sectors with weights — exported for testing
 export const DRUM_SECTORS: Array<{ sector: DrumSector; weight: number }> = [
@@ -443,12 +444,26 @@ export const useGameStore = create<StoreState>((set, get) => ({
         board: { ...s.board, revealed: newRevealed },
         players: updatedPlayers,
         turn: newTurn,
-        gameStatus: allRevealed ? 'roundComplete' : s.gameStatus,
+        gameStatus: allRevealed
+          ? (isFinalRound ? 'gameComplete' : 'roundComplete')
+          : s.gameStatus,
       };
     });
 
     if (allRevealed) {
       if (!muted) sounds.win(volume);
+      if (isFinalRound) {
+        const finalState = get();
+        const allRegular = finalState.players.filter((p) => !p.id.startsWith('final_'));
+        const entries = allRegular.map((p) => ({
+          playerId: p.id,
+          name: p.name,
+          totalScore: p.score,
+          groupName: finalState.config.groups[p.group - 1] || `Группа ${p.group}`,
+          roundsWon: p.isWinner ? 1 : 0,
+        }));
+        saveGameResults(entries);
+      }
     }
     // No auto-advance — correct answer keeps the turn with the same player
 
@@ -544,9 +559,22 @@ export const useGameStore = create<StoreState>((set, get) => ({
         board: { ...s.board, revealed: newRevealed },
         players: updatedPlayers,
         turn: { ...s.turn, timerRunning: false, pendingLetter: '', phase: 'result' },
-        gameStatus: 'roundComplete',
+        gameStatus: isFinalRound ? 'gameComplete' : 'roundComplete',
       };
     });
+
+    if (isFinalRound) {
+      const finalState = get();
+      const allRegular = finalState.players.filter((p) => !p.id.startsWith('final_'));
+      const entries = allRegular.map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        totalScore: p.score,
+        groupName: finalState.config.groups[p.group - 1] || `Группа ${p.group}`,
+        roundsWon: p.isWinner ? 1 : 0,
+      }));
+      saveGameResults(entries);
+    }
 
     saveState(get());
   },
@@ -600,20 +628,38 @@ export const useGameStore = create<StoreState>((set, get) => ({
 
   markWinner() {
     const { currentRound, config, players, muted, volume } = get();
-    const isFinal = config.rounds[currentRound]?.isFinal;
+    const isFinal = !!config.rounds[currentRound]?.isFinal;
     const roundPlayers = players.filter((p) =>
       isFinal ? p.id.startsWith('final_') : p.group === currentRound + 1
     );
     const cp = roundPlayers[get().turn.currentPlayerIndex];
     if (!cp) return;
     if (!muted) sounds.win(volume);
+
+    const nextStatus: GameState['gameStatus'] = isFinal ? 'gameComplete' : 'roundComplete';
+
     set((s) => ({
       players: s.players.map((p) =>
         p.id === cp.id ? { ...p, isWinner: true } : p
       ),
-      gameStatus: 'roundComplete',
+      gameStatus: nextStatus,
       turn: { ...s.turn, timerRunning: false, phase: 'result' },
     }));
+
+    // Persist results to all-time history when game is complete
+    if (isFinal) {
+      const finalState = get();
+      const allRegular = finalState.players.filter((p) => !p.id.startsWith('final_'));
+      const entries = allRegular.map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        totalScore: p.score,
+        groupName: finalState.config.groups[p.group - 1] || `Группа ${p.group}`,
+        roundsWon: p.isWinner ? 1 : 0,
+      }));
+      saveGameResults(entries);
+    }
+
     saveState(get());
   },
 
