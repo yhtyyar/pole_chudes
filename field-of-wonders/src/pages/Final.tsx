@@ -20,7 +20,11 @@ export function Final() {
   const [allTimeTop, setAllTimeTop] = useState<HistoryEntry[]>([]);
 
   // ── Build full TOP across all non-final players (sorted by total score) ──
-  const allRegularPlayers = players.filter((p) => !p.id.startsWith('final_'));
+  // Only include players whose name was actually set (not the default 'Игрок N' pattern)
+  const DEFAULT_NAME_RE = /^Игрок\s+\d+$/i;
+  const allRegularPlayers = players.filter(
+    (p) => !p.id.startsWith('final_') && !DEFAULT_NAME_RE.test(p.name.trim())
+  );
   const topEntries: GameTopEntry[] = allRegularPlayers
     .map((p) => ({
       playerId: p.id,
@@ -33,8 +37,9 @@ export function Final() {
 
   // ── Final round players ──
   const finalPlayers = players.filter((p) => p.id.startsWith('final_'));
+  // Prefer the player explicitly marked isWinner; fall back to highest scorer
   const finalWinner = finalPlayers.length > 0
-    ? finalPlayers.reduce((best, p) => (p.score > best.score ? p : best), finalPlayers[0])
+    ? (finalPlayers.find((p) => p.isWinner) ?? finalPlayers.reduce((best, p) => (p.score > best.score ? p : best), finalPlayers[0]))
     : null;
 
   // Resolve final winner's original group name

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check, RefreshCw, Music } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check, RefreshCw, Music, AlertCircle } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
 import { Board } from '../components/Board/Board';
 import { Drum } from '../components/Drum/Drum';
@@ -47,6 +47,13 @@ export function Game() {
 
   const isFinal        = gameStatus === 'final' || config.rounds[currentRound]?.isFinal;
   const isRoundComplete = gameStatus === 'roundComplete';
+
+  // Dynamic round counts (exclude final round)
+  const finalRoundIndex = config.rounds.reduce((fi, r, i) => (r.isFinal ? i : fi), config.rounds.length - 1);
+  const isLastRegularRound = !isFinal && currentRound === finalRoundIndex - 1;
+  const hasFinalRound = config.rounds.some((r) => r.isFinal);
+
+  const lastWrongLetter = turn.lastWrongLetter;
 
   const roundPlayers = isFinal
     ? players.filter((p) => p.id.startsWith('final_'))
@@ -358,6 +365,29 @@ export function Game() {
             </motion.div>
           )}
 
+          {/* Wrong letter feedback */}
+          <AnimatePresence>
+            {lastWrongLetter && gameStatus === 'playing' && (
+              <motion.div
+                key={lastWrongLetter + turn.currentPlayerIndex}
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl border"
+                style={{
+                  background: 'rgba(239,68,68,0.12)',
+                  borderColor: 'rgba(239,68,68,0.45)',
+                }}
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#ef4444' }} />
+                <span className="text-sm font-semibold" style={{ color: '#ef4444' }}>
+                  Буквы <span className="font-black text-base">«{lastWrongLetter}»</span> нет в слове
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
             <LetterInput />
           </div>
@@ -497,10 +527,8 @@ export function Game() {
               </h2>
 
               {(() => {
-                const winner = roundPlayers.reduce(
-                  (best, p) => (p.score > best.score ? p : best),
-                  roundPlayers[0]
-                );
+                const winner = roundPlayers.find((p) => p.isWinner)
+                  ?? roundPlayers.reduce((best, p) => (p.score > best.score ? p : best), roundPlayers[0]);
                 return winner ? (
                   <div className="my-6">
                     <p className="text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>Победитель</p>
@@ -518,7 +546,7 @@ export function Game() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {!isFinal && currentRound < 4 && (
+                {!isFinal && !isLastRegularRound && (
                   <button
                     onClick={startNextRound}
                     className="w-full py-4 rounded-xl bg-accent hover:bg-accent/80 text-white font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(233,69,96,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
@@ -526,12 +554,20 @@ export function Game() {
                     <Play className="w-5 h-5" /> Следующий раунд
                   </button>
                 )}
-                {!isFinal && currentRound === 4 && (
+                {!isFinal && isLastRegularRound && hasFinalRound && (
                   <button
                     onClick={startFinal}
                     className="w-full py-4 rounded-xl bg-gold hover:bg-gold/80 text-bg font-bold text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(245,197,66,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     <Trophy className="w-5 h-5" /> Начать финал!
+                  </button>
+                )}
+                {!isFinal && isLastRegularRound && !hasFinalRound && (
+                  <button
+                    onClick={() => useGameStore.getState().resetGame()}
+                    className="w-full py-4 rounded-xl bg-success hover:bg-success/80 text-white font-bold text-lg uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <PartyPopper className="w-5 h-5" /> Завершить игру
                   </button>
                 )}
                 {isFinal && (

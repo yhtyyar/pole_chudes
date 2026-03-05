@@ -58,6 +58,7 @@ function makeInitialTurn(): GameState['turn'] {
     pendingLetter: '',
     extraTurn: false,
     bankAmount: 0,
+    lastWrongLetter: '',
   };
 }
 
@@ -370,7 +371,7 @@ export const useGameStore = create<StoreState>((set, get) => ({
       logEvent('LETTER', `Неверная буква: ${letter}`, { word: board.word }, 'WARN');
       if (!muted) sounds.wrong(volume);
       set((s) => ({
-        turn: { ...s.turn, phase: 'result', timerRunning: false, pendingLetter: '' },
+        turn: { ...s.turn, phase: 'result', timerRunning: false, pendingLetter: '', lastWrongLetter: letter },
       }));
       setTimeout(() => get().nextPlayer(), 1500);
       saveState(get());
@@ -637,10 +638,13 @@ export const useGameStore = create<StoreState>((set, get) => ({
     if (!muted) sounds.win(volume);
 
     const nextStatus: GameState['gameStatus'] = isFinal ? 'gameComplete' : 'roundComplete';
+    const WINNER_BONUS = 1500;
 
     set((s) => ({
       players: s.players.map((p) =>
-        p.id === cp.id ? { ...p, isWinner: true } : p
+        p.id === cp.id
+          ? { ...p, isWinner: true, score: p.score + WINNER_BONUS, roundScore: p.roundScore + WINNER_BONUS }
+          : p
       ),
       gameStatus: nextStatus,
       turn: { ...s.turn, timerRunning: false, phase: 'result' },

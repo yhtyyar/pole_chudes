@@ -27,6 +27,7 @@ const MINIMAL_STATE: GameState = {
     pendingLetter: '',
     extraTurn: false,
     bankAmount: 0,
+    lastWrongLetter: '',
   },
   gameStatus: 'playing',
   questionVisible: true,
