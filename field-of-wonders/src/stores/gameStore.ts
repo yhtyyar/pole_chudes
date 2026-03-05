@@ -95,6 +95,20 @@ function buildFinalPlayers(winners: Player[]): Player[] {
   }));
 }
 
+/** Build final_ prefixed players directly for final-only mode (no regular rounds). */
+function buildFinalOnlyPlayers(names: string[], count: number): Player[] {
+  const total = names.length > 0 ? names.length : count;
+  return Array.from({ length: total }, (_, i) => ({
+    id: `final_p${i + 1}`,
+    name: names[i]?.trim() || `Финалист ${i + 1}`,
+    group: i + 1,
+    score: 0,
+    roundScore: 0,
+    isWinner: false,
+    isBankrupt: false,
+  }));
+}
+
 export interface GameActions {
   // Setup
   startGame: (form: SetupForm) => void;
@@ -187,17 +201,29 @@ export const useGameStore = create<StoreState>((set, get) => ({
     const word = firstActive?.word ?? '';
     const firstActiveIndex = allRounds.findIndex((r) => r.word.length > 0);
 
+    // Detect final-only mode: every active (non-empty) round is marked isFinal
+    const activeRounds = allRounds.filter((r) => r.word.length > 0);
+    const isFinalOnly = activeRounds.length > 0 && activeRounds.every((r) => r.isFinal);
+
     // Save all entered player names to the known-players book
-    const allNames = (form.playerNames ?? []).flat().filter(Boolean);
+    const allNames = isFinalOnly
+      ? (form.finalPlayerNames ?? []).filter(Boolean)
+      : (form.playerNames ?? []).flat().filter(Boolean);
     if (allNames.length) saveKnownPlayers(allNames);
 
     const playerNames = form.playerNames ?? [];
     const playersPerGroup = form.playersPerGroup ?? form.groups.map(() => DEFAULT_PLAYERS_PER_GROUP);
+
+    // Build players: in final-only mode create final_ prefixed players directly
+    const players = isFinalOnly
+      ? buildFinalOnlyPlayers(form.finalPlayerNames ?? [], form.finalPlayersCount ?? DEFAULT_PLAYERS_PER_GROUP)
+      : buildInitialPlayers(form.groups, playerNames, playersPerGroup);
+
     const state: GameState = {
       meta: { version: '1.0.0', createdAt: now, lastSaved: now },
       config: { groups: form.groups.map((g) => g.trim()), rounds: allRounds, playerNames, playersPerGroup },
       currentRound: Math.max(0, firstActiveIndex),
-      players: buildInitialPlayers(form.groups, playerNames, playersPerGroup),
+      players,
       board: { word, revealed: Array(word.length).fill(false) },
       turn: makeInitialTurn(),
       gameStatus: 'playing',

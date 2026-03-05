@@ -56,8 +56,9 @@ export function Game() {
 
   const lastWrongLetter = turn.lastWrongLetter;
 
+  const finalPlayers = players.filter((p) => p.id.startsWith('final_'));
   const roundPlayers = isFinal
-    ? players.filter((p) => p.id.startsWith('final_'))
+    ? (finalPlayers.length > 0 ? finalPlayers : players.filter((p) => p.group === currentRound + 1))
     : players.filter((p) => p.group === currentRound + 1 && !p.id.startsWith('final_'));
 
   const currentPlayer = roundPlayers[turn.currentPlayerIndex];
@@ -99,7 +100,7 @@ export function Game() {
               <span className="flex items-center gap-1">
                 <Trophy className="w-3 h-3" /> ФИНАЛ
               </span>
-            ) : (`Раунд ${currentRound + 1}/5`)}
+            ) : (`Раунд ${currentRound + 1}/${config.rounds.filter((r) => !r.isFinal).length}`)}
             </span>
             {!isFinal && (
               <span className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>

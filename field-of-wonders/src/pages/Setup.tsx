@@ -16,6 +16,9 @@ const MIN_GROUPS = 1;
 const MAX_GROUPS = 8;
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 8;
+const MIN_FINAL_PLAYERS = 1;
+const MAX_FINAL_PLAYERS = 10;
+const DEFAULT_FINAL_PLAYERS = 3;
 
 function makeDefaultPlayerNames(groupCount: number, playersPerGroup: number[]): string[][] {
   return Array.from({ length: groupCount }, (_, gi) =>
@@ -232,11 +235,16 @@ export function Setup() {
 
   const [regularRounds, setRegularRounds] = useState(DEFAULT_REGULAR_ROUNDS.map((r) => ({ ...r })));
   const [finalRound, setFinalRound] = useState<{ word: string; question: string } | null>({ ...DEFAULT_FINAL_ROUND });
+  const [finalPlayerNames, setFinalPlayerNames] = useState<string[]>(
+    Array.from({ length: DEFAULT_FINAL_PLAYERS }, (_, i) => `Финалист ${i + 1}`)
+  );
   const [form, setForm] = useState<SetupForm>({
     groups: [...INITIAL_GROUPS],
     playerNames: makeDefaultPlayerNames(INITIAL_GROUPS.length, INITIAL_PPG),
     playersPerGroup: [...INITIAL_PPG],
     rounds: [...DEFAULT_REGULAR_ROUNDS.map((r) => ({ ...r, isFinal: false as const })), { ...DEFAULT_FINAL_ROUND, isFinal: true as const }],
+    finalPlayerNames: Array.from({ length: DEFAULT_FINAL_PLAYERS }, (_, i) => `Финалист ${i + 1}`),
+    finalPlayersCount: DEFAULT_FINAL_PLAYERS,
   });
   const [errors, setErrors] = useState<FieldErrors>({ groups: [], rounds: [] });
   const [importing, setImporting] = useState(false);
@@ -256,10 +264,12 @@ export function Setup() {
   // ── Derived ──
   const hasFinal = finalRound !== null;
   const activeRegularRounds = regularRounds.filter((r) => r.word.trim().length > 0).length;
+  // Final-only mode: final is enabled AND no regular round has a word
+  const isFinalOnly = hasFinal && activeRegularRounds === 0;
 
   function handleStart() {
     const rounds = buildRounds(regularRounds, finalRound);
-    const updatedForm = { ...form, rounds };
+    const updatedForm = { ...form, rounds, finalPlayerNames, finalPlayersCount: finalPlayerNames.length };
     setForm(updatedForm);
     // validate directly against current state
     const groupErrs: string[] = updatedForm.groups.map((g) => validateGroupName(g) ?? '');
@@ -310,6 +320,27 @@ export function Setup() {
     const newFinal = hasFinal ? null : { word: '', question: '' };
     setFinalRound(newFinal);
     setForm((f) => ({ ...f, rounds: buildRounds(regularRounds, newFinal) }));
+  }
+
+  // ── Final players management (final-only mode) ──
+  function addFinalPlayer() {
+    if (finalPlayerNames.length >= MAX_FINAL_PLAYERS) return;
+    const newNames = [...finalPlayerNames, `Финалист ${finalPlayerNames.length + 1}`];
+    setFinalPlayerNames(newNames);
+    setForm((f) => ({ ...f, finalPlayerNames: newNames, finalPlayersCount: newNames.length }));
+  }
+
+  function removeFinalPlayer(i: number) {
+    if (finalPlayerNames.length <= MIN_FINAL_PLAYERS) return;
+    const newNames = finalPlayerNames.filter((_, idx) => idx !== i);
+    setFinalPlayerNames(newNames);
+    setForm((f) => ({ ...f, finalPlayerNames: newNames, finalPlayersCount: newNames.length }));
+  }
+
+  function updateFinalPlayerName(i: number, name: string) {
+    const newNames = finalPlayerNames.map((n, idx) => (idx === i ? name : n));
+    setFinalPlayerNames(newNames);
+    setForm((f) => ({ ...f, finalPlayerNames: newNames }));
   }
 
   function updateFinalRound(r: { word: string; question: string }) {
@@ -491,69 +522,139 @@ export function Setup() {
       <div className="flex-1 overflow-y-auto px-4 py-6 max-w-6xl mx-auto w-full">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-          {/* ── Column 1: Groups + Players ── */}
+          {/* ── Column 1: Groups + Players OR Final-only players ── */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <span className="text-xl">👥</span> Группы и игроки
-              </h2>
-              {form.groups.length < MAX_GROUPS && (
-                <button
-                  type="button"
-                  onClick={addGroup}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
-                  style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
-                >
-                  <Plus className="w-3 h-3" /> Группа
-                </button>
-              )}
-            </div>
-
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-              Добавляйте и удаляйте группы (до {MAX_GROUPS}). Раскройте группу, чтобы управлять игроками (1–{MAX_PLAYERS} на группу).
-            </p>
-
-            {form.groups.map((group, i) => (
-              <div key={i} className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
-                    style={{ background: 'var(--color-accent, #e94560)', color: '#fff' }}
-                  >
-                    {i + 1}
-                  </span>
-                  <input
-                    type="text"
-                    value={group}
-                    onChange={(e) => updateGroupName(i, e.target.value)}
-                    className={`flex-1 input-field py-2 text-sm ${errors.groups[i] ? 'border-error' : ''}`}
-                    placeholder={`Группа ${i + 1}`}
-                  />
-                  {form.groups.length > MIN_GROUPS && (
+            {isFinalOnly ? (
+              /* ── FINAL-ONLY: dedicated finalist players panel ── */
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-gold" />
+                    <span className="text-gold">Финалисты</span>
+                  </h2>
+                  {finalPlayerNames.length < MAX_FINAL_PLAYERS && (
                     <button
                       type="button"
-                      onClick={() => removeGroup(i)}
-                      title="Удалить группу"
-                      className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-error hover:bg-error/15 transition-colors"
+                      onClick={addFinalPlayer}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{ background: 'rgba(245,197,66,0.12)', borderColor: 'rgba(245,197,66,0.4)', color: '#f5c542' }}
                     >
-                      <Minus className="w-3.5 h-3.5" />
+                      <UserPlus className="w-3 h-3" /> Добавить
                     </button>
                   )}
                 </div>
-                {errors.groups[i] && <p className="text-error text-xs ml-7">{errors.groups[i]}</p>}
 
-                <div className="ml-7">
-                  <GroupPlayersPanel
-                    groupIndex={i}
-                    groupName={group}
-                    playerNames={form.playerNames[i] ?? []}
-                    onChangeName={(pi, name) => updatePlayerName(i, pi, name)}
-                    onAddPlayer={() => addPlayer(i)}
-                    onRemovePlayer={(pi) => removePlayer(i, pi)}
-                  />
+                <div
+                  className="rounded-xl border p-3"
+                  style={{ borderColor: 'rgba(245,197,66,0.3)', background: 'rgba(245,197,66,0.05)' }}
+                >
+                  <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
+                    Режим «Только финал» — укажите участников финальной игры (1–{MAX_FINAL_PLAYERS} чел.). Группы не используются.
+                  </p>
+                  <div className="space-y-2">
+                    {finalPlayerNames.map((name, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span
+                          className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black"
+                          style={{ background: 'rgba(245,197,66,0.25)', color: '#f5c542' }}
+                        >
+                          {i + 1}
+                        </span>
+                        <PlayerNameInput
+                          value={name}
+                          onChange={(v) => updateFinalPlayerName(i, v)}
+                        />
+                        {finalPlayerNames.length > MIN_FINAL_PLAYERS && (
+                          <button
+                            type="button"
+                            onClick={() => removeFinalPlayer(i)}
+                            title="Убрать финалиста"
+                            className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-error hover:bg-error/15 transition-colors"
+                          >
+                            <UserMinus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {finalPlayerNames.length < MAX_FINAL_PLAYERS && (
+                    <button
+                      type="button"
+                      onClick={addFinalPlayer}
+                      className="w-full mt-3 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed text-xs font-medium transition-colors hover:opacity-80"
+                      style={{ borderColor: 'rgba(245,197,66,0.4)', color: '#f5c542' }}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Добавить финалиста
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              </>
+            ) : (
+              /* ── NORMAL MODE: groups + players ── */
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className="text-xl">👥</span> Группы и игроки
+                  </h2>
+                  {form.groups.length < MAX_GROUPS && (
+                    <button
+                      type="button"
+                      onClick={addGroup}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+                    >
+                      <Plus className="w-3 h-3" /> Группа
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+                  Добавляйте и удаляйте группы (до {MAX_GROUPS}). Раскройте группу, чтобы управлять игроками (1–{MAX_PLAYERS} на группу).
+                </p>
+
+                {form.groups.map((group, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                        style={{ background: 'var(--color-accent, #e94560)', color: '#fff' }}
+                      >
+                        {i + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={group}
+                        onChange={(e) => updateGroupName(i, e.target.value)}
+                        className={`flex-1 input-field py-2 text-sm ${errors.groups[i] ? 'border-error' : ''}`}
+                        placeholder={`Группа ${i + 1}`}
+                      />
+                      {form.groups.length > MIN_GROUPS && (
+                        <button
+                          type="button"
+                          onClick={() => removeGroup(i)}
+                          title="Удалить группу"
+                          className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-error hover:bg-error/15 transition-colors"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {errors.groups[i] && <p className="text-error text-xs ml-7">{errors.groups[i]}</p>}
+
+                    <div className="ml-7">
+                      <GroupPlayersPanel
+                        groupIndex={i}
+                        groupName={group}
+                        playerNames={form.playerNames[i] ?? []}
+                        onChangeName={(pi, name) => updatePlayerName(i, pi, name)}
+                        onAddPlayer={() => addPlayer(i)}
+                        onRemovePlayer={(pi) => removePlayer(i, pi)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </section>
 
           {/* ── Column 2: Rounds + Final ── */}
@@ -661,7 +762,10 @@ export function Setup() {
             {/* Summary badge */}
             <span className="text-xs px-2.5 py-1 rounded-full"
               style={{ background: 'var(--color-card)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
-              {form.groups.length} групп · {form.playersPerGroup.reduce((s, n) => s + n, 0)} игроков · {activeRegularRounds + (hasFinal && finalRound?.word ? 1 : 0)} раундов
+              {isFinalOnly
+                ? `${finalPlayerNames.length} финалистов · Только финал`
+                : `${form.groups.length} групп · ${form.playersPerGroup.reduce((s, n) => s + n, 0)} игроков · ${activeRegularRounds + (hasFinal && finalRound?.word ? 1 : 0)} раундов`
+              }
             </span>
 
             <button

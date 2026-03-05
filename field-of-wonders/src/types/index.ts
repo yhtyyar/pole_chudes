@@ -96,4 +96,8 @@ export interface SetupForm {
   /** Число игроков в каждой группе (по умолчанию 5) */
   playersPerGroup: number[];
   rounds: Array<{ word: string; question: string; isFinal?: boolean }>;
+  /** Имена финалистов (только для режима «только финал») */
+  finalPlayerNames?: string[];
+  /** Число финалистов (только для режима «только финал») */
+  finalPlayersCount?: number;
 }
