@@ -167,6 +167,7 @@ export function stopBgMusic(): void {
     clearTimeout(bgMusic.loopTimeoutId);
     bgMusic.loopTimeoutId = null;
   }
+  bgMusic.gainNode = null;
 }
 
 export function setBgMusicVolume(volume: number): void {

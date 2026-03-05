@@ -6,7 +6,7 @@ class MockAudioContext {
     return { connect: () => {}, frequency: { setValueAtTime: () => {} }, type: '', start: () => {}, stop: () => {} };
   }
   createGain() {
-    return { connect: () => {}, gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} } };
+    return { connect: () => {}, gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {}, setTargetAtTime: () => {} } };
   }
   createBuffer(_: number, size: number, sr: number) {
     return { getChannelData: () => new Float32Array(size), sampleRate: sr };
