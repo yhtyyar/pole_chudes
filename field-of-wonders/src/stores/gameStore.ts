@@ -102,22 +102,26 @@ export interface GameActions {
   // Letter input
   setPendingLetter: (letter: string) => void;
   submitLetter: () => void;
+  submitWord: (word: string) => void;
 
   // Admin controls
   forceRevealLetter: (letter: string) => void;
   forceBankrupt: () => void;
   nextPlayer: () => void;
+  previousPlayer: () => void;
   skipTurn: () => void;
   markWinner: () => void;
   setQuestionVisible: (v: boolean) => void;
   toggleMute: () => void;
   setVolume: (v: number) => void;
+  updatePlayerName: (playerId: string, name: string) => void;
 
   // Timer
   tickTimer: () => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
   resetTimer: () => void;
+  startTimer: () => void;
   extendTimer: (secs: number) => void;
 
   // Round/game flow
@@ -355,15 +359,17 @@ export const useGameStore = create<StoreState>((set, get) => ({
         };
       });
 
-      const newPhase: TurnState['phase'] =
-        allRevealed ? 'result' : sector?.type === 'extra' ? 'spin' : 'result';
+      // After correct letter: stay with same player (go back to spin phase)
+      // Only advance on wrong guess / bankrupt / timeout
+      const newPhase: TurnState['phase'] = allRevealed ? 'result' : 'spin';
 
       const newTurn: typeof s.turn = {
         ...s.turn,
         timerRunning: false,
         pendingLetter: '',
         phase: newPhase,
-        extraTurn: sector?.type === 'extra',
+        sector: allRevealed ? s.turn.sector : null,
+        extraTurn: false,
         bankAmount: sector?.type === 'bank' ? 0 : s.turn.bankAmount,
       };
 
@@ -377,10 +383,8 @@ export const useGameStore = create<StoreState>((set, get) => ({
 
     if (allRevealed) {
       if (!muted) sounds.win(volume);
-    } else if (sector?.type !== 'extra') {
-      // advance to next player after short delay (unless extra turn)
-      setTimeout(() => get().nextPlayer(), 1500);
     }
+    // No auto-advance — correct answer keeps the turn with the same player
 
     saveState(get());
   },
@@ -426,6 +430,61 @@ export const useGameStore = create<StoreState>((set, get) => ({
     saveState(get());
   },
 
+  submitWord(word) {
+    const { board, currentRound, muted, volume, config, turn } = get();
+    const normalized = word.trim().toUpperCase().replace(/Ё/g, 'Е');
+    if (!normalized || turn.phase !== 'input') return;
+
+    const isFinalRound = !!config.rounds[currentRound]?.isFinal;
+    const boardNorm = board.word.replace(/Ё/g, 'Е');
+
+    if (normalized !== boardNorm) {
+      logEvent('WORD', `Неверное слово: ${word}`, { word: board.word }, 'WARN');
+      if (!muted) sounds.wrong(volume);
+      set((s) => ({
+        turn: { ...s.turn, phase: 'result', timerRunning: false, pendingLetter: '' },
+      }));
+      setTimeout(() => get().nextPlayer(), 1500);
+      saveState(get());
+      return;
+    }
+
+    logEvent('WORD', `Слово угадано: ${word}`);
+    if (!muted) sounds.win(volume);
+
+    const newRevealed = Array(board.word.length).fill(true);
+
+    set((s) => {
+      const roundPs = s.players.filter((p) =>
+        isFinalRound ? p.id.startsWith('final_') : p.group === s.currentRound + 1
+      );
+      const cp = roundPs[s.turn.currentPlayerIndex];
+      const { sector } = s.turn;
+
+      let gain = 0;
+      const unrevealedCount = s.board.revealed.filter((r) => !r).length;
+      if (sector) {
+        if (sector.type === 'points') gain = sector.value * unrevealedCount;
+        else if (sector.type === 'bank') gain = s.turn.bankAmount + 100 * unrevealedCount;
+        else gain = 100 * unrevealedCount;
+      }
+
+      const updatedPlayers = s.players.map((p) => {
+        if (p.id !== cp?.id) return p;
+        return { ...p, roundScore: p.roundScore + gain, score: p.score + gain, isBankrupt: false };
+      });
+
+      return {
+        board: { ...s.board, revealed: newRevealed },
+        players: updatedPlayers,
+        turn: { ...s.turn, timerRunning: false, pendingLetter: '', phase: 'result' },
+        gameStatus: 'roundComplete',
+      };
+    });
+
+    saveState(get());
+  },
+
   nextPlayer() {
     const { currentRound, config } = get();
     const isFinal = config.rounds[currentRound]?.isFinal;
@@ -444,8 +503,33 @@ export const useGameStore = create<StoreState>((set, get) => ({
     saveState(get());
   },
 
+  previousPlayer() {
+    const { currentRound, config } = get();
+    const isFinal = config.rounds[currentRound]?.isFinal;
+    set((s) => {
+      const roundPlayers = s.players.filter((p) =>
+        isFinal ? p.id.startsWith('final_') : p.group === s.currentRound + 1
+      );
+      const prevIdx = (s.turn.currentPlayerIndex - 1 + roundPlayers.length) % roundPlayers.length;
+      return {
+        turn: {
+          ...makeInitialTurn(),
+          currentPlayerIndex: prevIdx,
+        },
+      };
+    });
+    saveState(get());
+  },
+
   skipTurn() {
     get().nextPlayer();
+  },
+
+  updatePlayerName(playerId, name) {
+    set((s) => ({
+      players: s.players.map((p) => p.id === playerId ? { ...p, name: name.trim() || p.name } : p),
+    }));
+    saveState(get());
   },
 
   markWinner() {
@@ -512,6 +596,10 @@ export const useGameStore = create<StoreState>((set, get) => ({
 
   resetTimer() {
     set((s) => ({ turn: { ...s.turn, timer: 15, timerRunning: false } }));
+  },
+
+  startTimer() {
+    set((s) => ({ turn: { ...s.turn, timer: 15, timerRunning: true } }));
   },
 
   extendTimer(secs) {

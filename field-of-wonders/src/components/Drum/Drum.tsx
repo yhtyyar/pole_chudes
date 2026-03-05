@@ -390,10 +390,10 @@ export function Drum() {
                 </button>
               )}
 
-              {/* Big wheel - uses same rotation angle as small wheel */}
+              {/* Big wheel - entry/exit scale animation only, rotation handled by controls */}
               <motion.div
-                initial={{ scale: 0.4, opacity: 0, rotate: fullscreenRotationRef.current }}
-                animate={{ scale: 1, opacity: 1, rotate: rotationRef.current }}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.4, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 22 }}
                 className="relative flex-shrink-0"

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX, Download, FileText, X, Trophy, RotateCcw, Play, PartyPopper, Skull, Pencil, Check } from 'lucide-react';
 import { useGameStore } from '../stores/gameStore';
 import { Board } from '../components/Board/Board';
 import { Drum } from '../components/Drum/Drum';
@@ -33,6 +33,10 @@ export function Game() {
   const startFinal    = useGameStore((s) => s.startFinal);
   const exportState   = useGameStore((s) => s.exportState);
   const resetGame     = useGameStore((s) => s.resetGame);
+  const updatePlayerName = useGameStore((s) => s.updatePlayerName);
+
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   const isFinal        = gameStatus === 'final' || config.rounds[currentRound]?.isFinal;
   const isRoundComplete = gameStatus === 'roundComplete';
@@ -150,16 +154,19 @@ export function Game() {
         </div>
 
         {/* ── Player score cards ── */}
-        <div className="flex items-stretch gap-2 pt-2 pb-1 overflow-x-auto min-h-[72px]">
+        <div className="flex items-stretch gap-2 pt-2 pb-1 overflow-x-auto min-h-[76px]">
           {roundPlayers.map((player, idx) => {
             const isActive = idx === turn.currentPlayerIndex && gameStatus === 'playing';
             const isBankrupt = player.isBankrupt;
+            const isEditing = editingPlayerId === player.id;
+
             return (
               <motion.div
                 key={player.id}
                 layout
-                className="relative flex flex-col justify-between px-3 py-2 rounded-xl border flex-shrink-0 transition-all duration-300 min-w-[100px] overflow-hidden"
+                className="relative flex flex-col justify-between px-3 py-2 rounded-xl border flex-shrink-0 transition-all duration-300 overflow-hidden"
                 style={{
+                  minWidth: Math.max(110, player.name.length * 9 + 56),
                   background: isActive
                     ? 'linear-gradient(135deg, rgba(233,69,96,0.28) 0%, rgba(233,69,96,0.18) 100%)'
                     : isBankrupt
@@ -175,7 +182,7 @@ export function Game() {
                     : undefined,
                 }}
               >
-                {/* Top: number badge + name */}
+                {/* Top: number badge + name (editable) */}
                 <div className="flex items-center gap-1.5 mb-1">
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
@@ -186,12 +193,47 @@ export function Game() {
                   >
                     {idx + 1}
                   </div>
-                  <span
-                    className="text-xs font-bold truncate max-w-[80px] leading-tight"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {player.name}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      className="text-xs font-bold rounded px-1 py-0.5 outline-none border w-full"
+                      style={{ background: 'var(--color-panel)', borderColor: '#e94560', color: 'var(--color-text)', minWidth: 60, maxWidth: 120 }}
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { updatePlayerName(player.id, editingName); setEditingPlayerId(null); }
+                        if (e.key === 'Escape') setEditingPlayerId(null);
+                      }}
+                      onBlur={() => { updatePlayerName(player.id, editingName); setEditingPlayerId(null); }}
+                      maxLength={20}
+                    />
+                  ) : (
+                    <span
+                      className="text-xs font-bold leading-tight whitespace-nowrap cursor-pointer hover:underline"
+                      style={{ color: 'var(--color-text)' }}
+                      title="Нажмите для редактирования имени"
+                      onClick={() => { setEditingPlayerId(player.id); setEditingName(player.name); }}
+                    >
+                      {player.name}
+                    </span>
+                  )}
+                  {!isEditing && (
+                    <button
+                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => { setEditingPlayerId(player.id); setEditingName(player.name); }}
+                      title="Редактировать имя"
+                    >
+                      <Pencil className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
+                    </button>
+                  )}
+                  {isEditing && (
+                    <button
+                      className="flex-shrink-0"
+                      onClick={() => { updatePlayerName(player.id, editingName); setEditingPlayerId(null); }}
+                    >
+                      <Check className="w-3 h-3 text-success" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Bottom: score */}
@@ -211,7 +253,7 @@ export function Game() {
                     </span>
                   )}
                   {player.roundScore > 0 && (
-                    <span 
+                    <span
                       className="text-xs font-bold text-success leading-none flex-shrink-0 cursor-help"
                       title={`+${player.roundScore} очков за текущий раунд`}
                     >

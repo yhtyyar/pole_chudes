@@ -38,31 +38,32 @@
 }
 
 [data-theme="light"] {
-  --color-bg:         #eef2f7;
-  --color-panel:      #dce4f0;
-  --color-card:       #c8d4e8;
-  --color-text:       #1a1a2e;
-  --color-text-muted: rgba(26,26,46,0.65);
-  --color-border:     rgba(26,26,46,0.12);
+  /* Warm cream-white background, rich navy panels */
+  --color-bg:         #f7f3ed;
+  --color-panel:      #ffffff;
+  --color-card:       #f0ebe2;
+  --color-text:       #1c1a14;
+  --color-text-muted: rgba(28,26,20,0.55);
+  --color-border:     rgba(28,26,20,0.10);
 
-  /* Board cells — ivory/gloss for closed, blue for open */
-  --cell-closed-bg:     #f5f0e8;
-  --cell-closed-border: #ddd5c0;
+  /* Board cells — warm ivory closed, vibrant indigo open */
+  --cell-closed-bg:     #faf7f0;
+  --cell-closed-border: #d4c9b3;
   --cell-closed-text:   transparent;
   --cell-open-bg:       #1d4ed8;
   --cell-open-border:   #3b82f6;
   --cell-open-text:     #ffffff;
 
-  /* Drum sectors */
-  --drum-points: #2563eb;
-  --drum-points-alt: #65a30d;
-  --drum-points-high: #d97706;
-  --drum-points-max: #d97706;
-  --drum-double: #0d9488;
-  --drum-extra: #0891b2;
-  --drum-bankrupt: #dc2626;
-  --drum-prize: #d97706;
-  --drum-bank: #059669;
+  /* Drum sectors — rich saturated colors */
+  --drum-points:     #1d4ed8;
+  --drum-points-alt: #16a34a;
+  --drum-points-high:#c2410c;
+  --drum-points-max: #b45309;
+  --drum-double:     #0f766e;
+  --drum-extra:      #0369a1;
+  --drum-bankrupt:   #b91c1c;
+  --drum-prize:      #b45309;
+  --drum-bank:       #047857;
 
   --scrollbar-track: rgba(0,0,0,0.06);
   --scrollbar-thumb: rgba(0,0,0,0.18);
@@ -102,11 +103,23 @@
     border-color: rgba(233,69,96,0.6);
     box-shadow: 0 0 0 3px rgba(233,69,96,0.15);
   }
+  [data-theme="light"] .input-field {
+    background: #ffffff;
+    border-color: rgba(28,26,20,0.15);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  [data-theme="light"] .input-field:focus {
+    border-color: #e94560;
+    box-shadow: 0 0 0 3px rgba(233,69,96,0.12), 0 1px 3px rgba(0,0,0,0.06);
+  }
 
   .btn-admin {
     @apply px-3 py-2.5 rounded-xl border text-sm font-semibold
            transition-all duration-150 active:scale-95 cursor-pointer
            disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  [data-theme="light"] .btn-admin {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   }
 
   /* ── Board letter cells ── */
@@ -136,6 +149,12 @@
     color: #ffffff;
     box-shadow: 0 0 18px rgba(37,99,235,0.55),
                 inset 0 1px 2px rgba(255,255,255,0.25);
+  }
+
+  /* ── Light theme panel shadows ── */
+  [data-theme="light"] header,
+  [data-theme="light"] aside {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   }
 }
 
