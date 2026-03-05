@@ -60,10 +60,13 @@ function makeInitialTurn(): GameState['turn'] {
   };
 }
 
-function buildInitialPlayers(groups: string[], playerNames: string[][]): Player[] {
+const DEFAULT_PLAYERS_PER_GROUP = 5;
+
+function buildInitialPlayers(groups: string[], playerNames: string[][], playersPerGroup: number[]): Player[] {
   const players: Player[] = [];
   groups.forEach((_group, gi) => {
-    for (let p = 0; p < 5; p++) {
+    const count = playersPerGroup[gi] ?? DEFAULT_PLAYERS_PER_GROUP;
+    for (let p = 0; p < count; p++) {
       players.push({
         id: `g${gi + 1}p${p + 1}`,
         name: playerNames[gi]?.[p]?.trim() || `Игрок ${p + 1}`,
@@ -139,7 +142,7 @@ export interface GameActions {
 
 const DEFAULT_STATE: GameState = {
   meta: { version: '1.0.0', createdAt: 0, lastSaved: 0 },
-  config: { groups: [], rounds: [], playerNames: [] },
+  config: { groups: [], rounds: [], playerNames: [], playersPerGroup: [] },
   currentRound: 0,
   players: [],
   board: { word: '', revealed: [] },
@@ -162,25 +165,32 @@ export const useGameStore = create<StoreState>((set, get) => ({
   startGame(form) {
     resumeAudio();
     const now = Date.now();
-    const word = form.rounds[0].word.trim().toUpperCase();
-    const rounds = form.rounds.map((r, i) => ({
+
+    // Build rounds — only include rounds that have a word (active rounds).
+    // Round index 5 is always the final. We remap ids to preserve order.
+    const allRounds = form.rounds.map((r, i) => ({
       id: i,
       word: r.word.trim().toUpperCase(),
       question: r.question.trim(),
       completed: false,
-      isFinal: i === 5,
+      isFinal: i === form.rounds.length - 1 && form.rounds.length > 1,
     }));
+    // First active (non-empty) round word for the initial board
+    const firstActive = allRounds.find((r) => r.word.length > 0);
+    const word = firstActive?.word ?? '';
+    const firstActiveIndex = allRounds.findIndex((r) => r.word.length > 0);
 
     // Save all entered player names to the known-players book
     const allNames = (form.playerNames ?? []).flat().filter(Boolean);
     if (allNames.length) saveKnownPlayers(allNames);
 
     const playerNames = form.playerNames ?? [];
+    const playersPerGroup = form.playersPerGroup ?? form.groups.map(() => DEFAULT_PLAYERS_PER_GROUP);
     const state: GameState = {
       meta: { version: '1.0.0', createdAt: now, lastSaved: now },
-      config: { groups: form.groups.map((g) => g.trim()), rounds, playerNames },
-      currentRound: 0,
-      players: buildInitialPlayers(form.groups, playerNames),
+      config: { groups: form.groups.map((g) => g.trim()), rounds: allRounds, playerNames, playersPerGroup },
+      currentRound: Math.max(0, firstActiveIndex),
+      players: buildInitialPlayers(form.groups, playerNames, playersPerGroup),
       board: { word, revealed: Array(word.length).fill(false) },
       turn: makeInitialTurn(),
       gameStatus: 'playing',
@@ -191,7 +201,7 @@ export const useGameStore = create<StoreState>((set, get) => ({
       bgMusicVolume: get().bgMusicVolume,
     };
 
-    logEvent('GAME', 'Игра начата', { groups: form.groups, rounds: rounds.map((r) => r.word) });
+    logEvent('GAME', 'Игра начата', { groups: form.groups, rounds: allRounds.map((r) => r.word) });
     saveState(state);
     set(state);
 
@@ -200,17 +210,20 @@ export const useGameStore = create<StoreState>((set, get) => ({
   },
 
   restartGame() {
-    // Keep config (words/groups/playerNames) but reset all scores and round state
+    // Keep config (words/groups/playerNames/playersPerGroup) but reset all scores and round state
     const { config, bgMusicEnabled, bgMusicVolume } = get();
     if (!config.rounds.length) return;
-    const word = config.rounds[0].word;
+    const firstActive = config.rounds.find((r) => r.word.length > 0);
+    const firstActiveIndex = config.rounds.findIndex((r) => r.word.length > 0);
+    const word = firstActive?.word ?? '';
     stopBgMusic();
     logEvent('GAME', 'Игра перезапущена');
+    const playersPerGroup = config.playersPerGroup ?? config.groups.map(() => DEFAULT_PLAYERS_PER_GROUP);
     const state: GameState = {
       meta: { version: '1.0.0', createdAt: Date.now(), lastSaved: Date.now() },
-      config,
-      currentRound: 0,
-      players: buildInitialPlayers(config.groups, config.playerNames ?? []),
+      config: { ...config, playersPerGroup },
+      currentRound: Math.max(0, firstActiveIndex),
+      players: buildInitialPlayers(config.groups, config.playerNames ?? [], playersPerGroup),
       board: { word, revealed: Array(word.length).fill(false) },
       turn: makeInitialTurn(),
       gameStatus: 'playing',
@@ -230,6 +243,9 @@ export const useGameStore = create<StoreState>((set, get) => ({
     if (!saved) return false;
     // Ensure new fields exist for backward-compat with old saves
     if (!saved.config.playerNames) saved.config.playerNames = [];
+    if (!saved.config.playersPerGroup) {
+      saved.config.playersPerGroup = saved.config.groups.map(() => DEFAULT_PLAYERS_PER_GROUP);
+    }
     if (saved.bgMusicEnabled === undefined) saved.bgMusicEnabled = false;
     if (saved.bgMusicVolume === undefined) saved.bgMusicVolume = 0.4;
     set(saved);
@@ -677,11 +693,22 @@ export const useGameStore = create<StoreState>((set, get) => ({
   // ── Round/game flow ──────────────────────────────────────────────────────
 
   startNextRound() {
-    const { currentRound, config, players } = get();
-    const nextRound = currentRound + 1;
+    const { currentRound, config } = get();
 
-    if (nextRound >= 5) {
-      // Move to final
+    // Find the final round (last round with isFinal flag, or last round overall)
+    const finalRoundIndex = config.rounds.reduce(
+      (fi, r, i) => (r.isFinal ? i : fi),
+      config.rounds.length - 1
+    );
+
+    // Find next non-empty round after current
+    let nextRound = currentRound + 1;
+    while (nextRound < finalRoundIndex && !config.rounds[nextRound]?.word) {
+      nextRound++;
+    }
+
+    // If we've reached or passed the final round, start final
+    if (nextRound >= finalRoundIndex) {
       get().startFinal();
       return;
     }
@@ -695,14 +722,21 @@ export const useGameStore = create<StoreState>((set, get) => ({
       questionVisible: true,
     });
     saveState(get());
-    void players;
   },
 
   startFinal() {
     const { config, players } = get();
+
+    // Find final round index dynamically
+    const finalRoundIndex = config.rounds.reduce(
+      (fi, r, i) => (r.isFinal ? i : fi),
+      config.rounds.length - 1
+    );
+
     // Collect one winner per group (highest score per group)
+    const groupCount = config.groups.length;
     const winners: Player[] = [];
-    for (let g = 1; g <= 5; g++) {
+    for (let g = 1; g <= groupCount; g++) {
       const gPlayers = players.filter((p) => p.group === g && !p.id.startsWith('final_'));
       if (gPlayers.length === 0) continue;
       const winner = gPlayers.reduce((best, p) => (p.score > best.score ? p : best), gPlayers[0]);
@@ -710,10 +744,10 @@ export const useGameStore = create<StoreState>((set, get) => ({
     }
 
     const finalPlayers = buildFinalPlayers(winners);
-    const word = config.rounds[5].word;
+    const word = config.rounds[finalRoundIndex]?.word ?? '';
 
     set((s) => ({
-      currentRound: 5,
+      currentRound: finalRoundIndex,
       players: [...s.players, ...finalPlayers],
       board: { word, revealed: Array(word.length).fill(false) },
       turn: makeInitialTurn(),

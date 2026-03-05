@@ -18,6 +18,7 @@ import type { SetupForm } from '../types';
 
 const FORM: SetupForm = {
   groups: ['Группа 1', 'Группа 2', 'Группа 3', 'Группа 4', 'Группа 5'],
+  playersPerGroup: [5, 5, 5, 5, 5],
   playerNames: [
     ['Алиса', 'Боб', 'Вера', 'Гена', 'Дима'],
     ['Ева', 'Жора', 'Зина', 'Игорь', 'Катя'],

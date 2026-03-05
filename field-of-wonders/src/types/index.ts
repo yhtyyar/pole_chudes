@@ -55,8 +55,10 @@ export interface GameState {
   config: {
     groups: string[];
     rounds: RoundConfig[];
-    /** Имена игроков в каждой группе (5 игроков × N групп) */
+    /** Имена игроков в каждой группе (переменное число × N групп) */
     playerNames: string[][];
+    /** Число активных игроков в каждой группе (по умолчанию 5) */
+    playersPerGroup: number[];
   };
   currentRound: number;
   players: Player[];
@@ -90,5 +92,7 @@ export interface SetupForm {
   groups: string[];
   /** Имена игроков в каждой группе */
   playerNames: string[][];
+  /** Число игроков в каждой группе (по умолчанию 5) */
+  playersPerGroup: number[];
   rounds: Array<{ word: string; question: string }>;
 }

@@ -7,6 +7,7 @@ const MINIMAL_STATE: GameState = {
   config: {
     groups: ['Группа 1', 'Группа 2'],
     playerNames: [],
+    playersPerGroup: [5, 5],
     rounds: [
       { id: 0, word: 'СЛОВО', question: 'Вопрос 1', completed: false, isFinal: false },
     ],

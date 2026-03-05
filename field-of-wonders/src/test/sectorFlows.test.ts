@@ -17,6 +17,7 @@ import type { SetupForm } from '../types';
 const FORM: SetupForm = {
   groups: ['G1', 'G2', 'G3', 'G4', 'G5'],
   playerNames: [],
+  playersPerGroup: [5, 5, 5, 5, 5],
   rounds: [
     { word: 'БАРАБАН', question: 'Q1' },
     { word: 'СЛОВО',   question: 'Q2' },
@@ -433,7 +434,7 @@ describe('loadSavedState — backward compatibility', () => {
   it('fills missing playerNames with empty array', () => {
     const state = {
       meta: { version: '1.0.0', createdAt: 0, lastSaved: 0 },
-      config: { groups: ['G1'], rounds: [{ id: 0, word: 'ТЕСТ', question: 'Q', completed: false, isFinal: false }] },
+      config: { groups: ['G1'], rounds: [{ id: 0, word: 'ТЕСТ', question: 'Q', completed: false, isFinal: false }], playersPerGroup: [5] },
       currentRound: 0,
       players: [],
       board: { word: 'ТЕСТ', revealed: [false, false, false, false] },
@@ -462,7 +463,7 @@ describe('loadSavedState — backward compatibility', () => {
     // Save manually and reload
     const stateToSave = {
       meta: { version: '1.0.0', createdAt: 0, lastSaved: 0 },
-      config: { groups: ['G1'], rounds: [{ id: 0, word: 'ТЕСТ', question: 'Q', completed: false, isFinal: false }], playerNames: [] },
+      config: { groups: ['G1'], rounds: [{ id: 0, word: 'ТЕСТ', question: 'Q', completed: false, isFinal: false }], playerNames: [], playersPerGroup: [5] },
       currentRound: 0,
       players: [],
       board: { word: 'ТЕСТ', revealed: [false, false, false, false] },
