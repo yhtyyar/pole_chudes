@@ -155,11 +155,10 @@ describe('finishDrumSpin — bankrupt', () => {
 
   it('resets roundScore of current player on bankrupt', () => {
     // DRUM_SECTORS weight layout (cumulative out of 72):
-    // 100(10), 150(10), 200(8), 250(7), 300(6), 350(5), 400(4), 500(3), 1000(1) = 54
-    // double(4)=58, extra(4)=62, bankrupt(5)=67, prize(2)=69, bank(3)=72
-    // spinDrum uses: rand -= weight; if (rand <= 0) return sector
-    // bankrupt hits when rand * 72 lands in (62, 67] → use midpoint 64.5/72
-    const bankruptSeed = 64.5 / 72;
+    // 100(10), 150(10), 200(8), 250(7), 300(6), 350(5), 400(4), 500(3), 600(3), 1000(1) = 57
+    // double(4)=61, extra(4)=65, bankrupt(5)=70, prize(2)=72
+    // bankrupt hits when rand * 72 lands in (65, 70] → use midpoint 67.5/72
+    const bankruptSeed = 67.5 / 72;
     const expectedSector = spinDrumWithSeed(bankruptSeed);
     vi.spyOn(Math, 'random').mockReturnValue(bankruptSeed);
 
@@ -321,10 +320,10 @@ describe('timer actions', () => {
     expect(useGameStore.getState().turn.timerRunning).toBe(true);
   });
 
-  it('resetTimer resets to 15 and stops', () => {
+  it('resetTimer resets to DEFAULT_TIMER (20) and stops', () => {
     useGameStore.setState((s) => ({ turn: { ...s.turn, timer: 5, timerRunning: true } }));
     useGameStore.getState().resetTimer();
-    expect(useGameStore.getState().turn.timer).toBe(15);
+    expect(useGameStore.getState().turn.timer).toBe(20);
     expect(useGameStore.getState().turn.timerRunning).toBe(false);
   });
 
@@ -368,10 +367,10 @@ describe('nextPlayer', () => {
     expect(useGameStore.getState().turn.drumSpinning).toBe(false);
   });
 
-  it('resets timer to 15', () => {
+  it('resets timer to DEFAULT_TIMER (20)', () => {
     useGameStore.setState((s) => ({ turn: { ...s.turn, timer: 3 } }));
     useGameStore.getState().nextPlayer();
-    expect(useGameStore.getState().turn.timer).toBe(15);
+    expect(useGameStore.getState().turn.timer).toBe(20);
   });
 });
 
@@ -449,7 +448,7 @@ describe('startNextRound', () => {
     expect(turn.phase).toBe('spin');
     expect(turn.drumSpinning).toBe(false);
     expect(turn.sector).toBeNull();
-    expect(turn.timer).toBe(15);
+    expect(turn.timer).toBe(20);
   });
 
   it('sets gameStatus back to playing', () => {

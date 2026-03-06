@@ -44,7 +44,6 @@ export interface TurnState {
   phase: 'spin' | 'input' | 'result' | 'waiting';
   pendingLetter: string;
   extraTurn: boolean;
-  bankAmount: number; // накопленный банк для текущего игрока
   lastWrongLetter: string; // последняя неверная буква для отображения игрокам
 }
 

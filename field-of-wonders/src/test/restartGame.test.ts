@@ -87,7 +87,7 @@ describe('restartGame — basic state reset', () => {
     useGameStore.getState().restartGame();
     const { turn } = useGameStore.getState();
     expect(turn.phase).toBe('spin');
-    expect(turn.timer).toBe(15);
+    expect(turn.timer).toBe(20);
     expect(turn.drumSpinning).toBe(false);
     expect(turn.currentPlayerIndex).toBe(0);
     expect(turn.sector).toBeNull();

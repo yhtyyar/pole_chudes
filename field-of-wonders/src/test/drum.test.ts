@@ -6,7 +6,7 @@ import type { DrumSector } from '../types';
 
 describe('spinDrumWithSeed — deterministic', () => {
   it('returns a valid DrumSector for every seed from 0 to 0.999', () => {
-    const validTypes = new Set(['points', 'double', 'extra', 'bankrupt', 'prize', 'bank']);
+    const validTypes = new Set(['points', 'double', 'extra', 'bankrupt', 'prize']);
     for (let i = 0; i <= 100; i++) {
       const result = spinDrumWithSeed(i / 100);
       expect(validTypes.has(result.type)).toBe(true);
@@ -19,9 +19,9 @@ describe('spinDrumWithSeed — deterministic', () => {
     if (result.type === 'points') expect(result.value).toBe(100);
   });
 
-  it('seed 0.999 always returns bank (last sector)', () => {
+  it('seed 0.999 always returns prize (last sector)', () => {
     const result = spinDrumWithSeed(0.9999);
-    expect(result.type).toBe('bank');
+    expect(result.type).toBe('prize');
   });
 
   it('is deterministic — same seed returns same result', () => {
@@ -69,9 +69,8 @@ describe('DRUM_SECTORS configuration', () => {
     expect(bankrupt?.weight).toBe(5);
   });
 
-  it('contains prize and bank sectors', () => {
+  it('contains prize sector', () => {
     expect(DRUM_SECTORS.some((d) => d.sector.type === 'prize')).toBe(true);
-    expect(DRUM_SECTORS.some((d) => d.sector.type === 'bank')).toBe(true);
   });
 
   it('contains double and extra sectors', () => {
@@ -89,12 +88,12 @@ describe('DRUM_SECTORS configuration', () => {
       });
   });
 
-  it('points values are 100, 150, 200, 250, 300, 350, 400, 500, 1000', () => {
+  it('points values are 100, 150, 200, 250, 300, 350, 400, 500, 600, 1000', () => {
     const pointValues = DRUM_SECTORS
       .filter((d) => d.sector.type === 'points')
       .map((d) => (d.sector as Extract<DrumSector, { type: 'points' }>).value)
       .sort((a, b) => a - b);
-    expect(pointValues).toEqual([100, 150, 200, 250, 300, 350, 400, 500, 1000]);
+    expect(pointValues).toEqual([100, 150, 200, 250, 300, 350, 400, 500, 600, 1000]);
   });
 });
 
@@ -137,7 +136,6 @@ describe('spinDrum probability distribution', () => {
     expect(seen.has('points')).toBe(true);
     expect(seen.has('bankrupt')).toBe(true);
     expect(seen.has('prize')).toBe(true);
-    expect(seen.has('bank')).toBe(true);
     expect(seen.has('double')).toBe(true);
     expect(seen.has('extra')).toBe(true);
   });

@@ -110,8 +110,8 @@ describe('Integration: drum sector == displayed result', () => {
       ),
     }));
 
-    // bankrupt midpoint seed: (54+4+4) + 5/2 = 64.5 / 72
-    spinWithSeed(64.5 / 72);
+    // bankrupt midpoint seed: cumulative 65 + 5/2 = 67.5 / 72
+    spinWithSeed(67.5 / 72);
 
     const { turn, players } = useGameStore.getState();
     expect(turn.sector?.type).toBe('bankrupt');
@@ -132,34 +132,25 @@ describe('Integration: drum sector == displayed result', () => {
   });
 
   it('after double sector: turn.sector.type === "double"', () => {
-    // double midpoint: 54 + 2 = 56/72
-    spinWithSeed(56 / 72);
+    // double midpoint: 57 + 2 = 59/72
+    spinWithSeed(59 / 72);
 
     const { turn } = useGameStore.getState();
     expect(turn.sector?.type).toBe('double');
   });
 
   it('after extra sector: turn.sector.type === "extra" and phase === "input"', () => {
-    // extra midpoint: 58 + 2 = 60/72
-    spinWithSeed(60 / 72);
+    // extra midpoint: 61 + 2 = 63/72
+    spinWithSeed(63 / 72);
 
     const { turn } = useGameStore.getState();
     expect(turn.sector?.type).toBe('extra');
     expect(turn.phase).toBe('input');
   });
 
-  it('after bank sector: turn.sector.type === "bank" and phase === "input"', () => {
-    // bank midpoint: 69 + 1.5 = 70.5/72
-    spinWithSeed(70.5 / 72);
-
-    const { turn } = useGameStore.getState();
-    expect(turn.sector?.type).toBe('bank');
-    expect(turn.phase).toBe('input');
-  });
-
   it('after prize sector: turn.sector.type === "prize" and phase === "input"', () => {
-    // prize midpoint: 67 + 1 = 68/72
-    spinWithSeed(68 / 72);
+    // prize midpoint: 70 + 1 = 71/72
+    spinWithSeed(71 / 72);
 
     const { turn } = useGameStore.getState();
     expect(turn.sector?.type).toBe('prize');

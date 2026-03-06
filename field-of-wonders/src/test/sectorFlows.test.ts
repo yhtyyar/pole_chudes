@@ -1,13 +1,12 @@
 /**
- * Extended sector flow tests — prize, bank, extra, double, forceRevealLetter,
+ * Extended sector flow tests — prize, extra, double, forceRevealLetter,
  * submitWord, previousPlayer, markWinner, forceRevealLetter edge cases.
  *
  * Techniques:
  *   - Decision table: each sector type → expected phase + score behavior
- *   - Boundary: bank sector adds bankAmount correctly
  *   - State transition: spin → finishDrumSpin → submitLetter for each special sector
  *   - Equivalence partitioning: correct/wrong letter for each special sector
- *   - Error guessing: double with 0 roundScore, bank with 0 bankAmount
+ *   - Error guessing: double with 0 roundScore
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -71,7 +70,7 @@ describe('prize sector', () => {
   it('starts timer after landing on prize', () => {
     spinWithSeed(seedFor('prize'));
     expect(useGameStore.getState().turn.timerRunning).toBe(true);
-    expect(useGameStore.getState().turn.timer).toBe(15);
+    expect(useGameStore.getState().turn.timer).toBe(20);
   });
 
   it('correct letter on prize adds 100 per occurrence to score', () => {
@@ -157,48 +156,7 @@ describe('double sector', () => {
   });
 });
 
-// ─── bank sector ──────────────────────────────────────────────────────────────
-
-describe('bank sector', () => {
-  beforeEach(() => { vi.useFakeTimers(); freshGame(); });
-  afterEach(() => vi.useRealTimers());
-
-  it('sets phase to input', () => {
-    spinWithSeed(seedFor('bank'));
-    expect(useGameStore.getState().turn.phase).toBe('input');
-    expect(useGameStore.getState().turn.sector?.type).toBe('bank');
-  });
-
-  it('correct letter on bank adds (bankAmount + 100*count)', () => {
-    useGameStore.setState((s) => ({
-      turn: { ...s.turn, phase: 'input', sector: { type: 'bank' }, bankAmount: 500 },
-    }));
-    // БАРАБАН — Б appears 2 times → gain = 500 + 100*2 = 700
-    useGameStore.getState().setPendingLetter('Б');
-    useGameStore.getState().submitLetter();
-    const p = useGameStore.getState().players.find((p) => p.id === 'g1p1')!;
-    expect(p.roundScore).toBe(700);
-  });
-
-  it('correct letter on bank with bankAmount=0 adds 100*count', () => {
-    useGameStore.setState((s) => ({
-      turn: { ...s.turn, phase: 'input', sector: { type: 'bank' }, bankAmount: 0 },
-    }));
-    useGameStore.getState().setPendingLetter('Б');
-    useGameStore.getState().submitLetter();
-    const p = useGameStore.getState().players.find((p) => p.id === 'g1p1')!;
-    expect(p.roundScore).toBe(200);
-  });
-
-  it('clears bankAmount after correct bank letter', () => {
-    useGameStore.setState((s) => ({
-      turn: { ...s.turn, phase: 'input', sector: { type: 'bank' }, bankAmount: 300 },
-    }));
-    useGameStore.getState().setPendingLetter('Б');
-    useGameStore.getState().submitLetter();
-    expect(useGameStore.getState().turn.bankAmount).toBe(0);
-  });
-});
+// (bank sector was removed from the game)
 
 // ─── forceRevealLetter ────────────────────────────────────────────────────────
 
@@ -438,7 +396,7 @@ describe('loadSavedState — backward compatibility', () => {
       currentRound: 0,
       players: [],
       board: { word: 'ТЕСТ', revealed: [false, false, false, false] },
-      turn: { currentPlayerIndex: 0, timer: 15, timerRunning: false, sector: null, drumSpinning: false, phase: 'spin', pendingLetter: '', extraTurn: false, bankAmount: 0, lastWrongLetter: '' },
+      turn: { currentPlayerIndex: 0, timer: 20, timerRunning: false, sector: null, drumSpinning: false, phase: 'spin', pendingLetter: '', extraTurn: false, lastWrongLetter: '' },
       gameStatus: 'playing',
       questionVisible: true,
       muted: false,
@@ -467,7 +425,7 @@ describe('loadSavedState — backward compatibility', () => {
       currentRound: 0,
       players: [],
       board: { word: 'ТЕСТ', revealed: [false, false, false, false] },
-      turn: { currentPlayerIndex: 0, timer: 15, timerRunning: false, sector: null, drumSpinning: false, phase: 'spin', pendingLetter: '', extraTurn: false, bankAmount: 0, lastWrongLetter: '' },
+      turn: { currentPlayerIndex: 0, timer: 20, timerRunning: false, sector: null, drumSpinning: false, phase: 'spin', pendingLetter: '', extraTurn: false, lastWrongLetter: '' },
       gameStatus: 'playing',
       questionVisible: true,
       muted: false,

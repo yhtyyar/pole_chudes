@@ -59,7 +59,6 @@ function makeInitialTurn(): GameState['turn'] {
     phase: 'spin',
     pendingLetter: '',
     extraTurn: false,
-    bankAmount: 0,
     lastWrongLetter: '',
   };
 }
@@ -325,7 +324,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
             sector,
             phase: 'result',
             timerRunning: false,
-            bankAmount: 0,
           },
           players: s.players.map((p) =>
             p.id === cp?.id ? { ...p, roundScore: 0, isBankrupt: true } : p
@@ -458,7 +456,6 @@ export const useGameStore = create<StoreState>((set, get) => ({
         phase: newPhase,
         sector: allRevealed ? s.turn.sector : null,
         extraTurn: false,
-        bankAmount: 0,
       };
 
       return {
@@ -640,8 +637,10 @@ export const useGameStore = create<StoreState>((set, get) => ({
   },
 
   updatePlayerName(playerId, name) {
+    const trimmed = name.trim();
+    if (trimmed) saveKnownPlayers([trimmed]);
     set((s) => ({
-      players: s.players.map((p) => p.id === playerId ? { ...p, name: name.trim() || p.name } : p),
+      players: s.players.map((p) => p.id === playerId ? { ...p, name: trimmed || p.name } : p),
     }));
     saveState(get());
   },

@@ -31,7 +31,6 @@
   --drum-extra: #06b6d4;
   --drum-bankrupt: #ef4444;
   --drum-prize: #f5c542;
-  --drum-bank: #10b981;
   --scrollbar-track: rgba(255,255,255,0.05);
   --scrollbar-thumb: rgba(255,255,255,0.15);
   --scrollbar-thumb-hover: rgba(255,255,255,0.25);
@@ -39,16 +38,16 @@
 
 [data-theme="light"] {
   /* Warm cream-white background, rich navy panels */
-  --color-bg:         #f7f3ed;
+  --color-bg:         #f5f1ea;
   --color-panel:      #ffffff;
-  --color-card:       #f0ebe2;
-  --color-text:       #1c1a14;
-  --color-text-muted: rgba(28,26,20,0.55);
-  --color-border:     rgba(28,26,20,0.10);
+  --color-card:       #eee8dd;
+  --color-text:       #1a1710;
+  --color-text-muted: #5c5547;
+  --color-border:     rgba(28,26,20,0.18);
 
   /* Board cells — warm ivory closed, vibrant indigo open */
-  --cell-closed-bg:     #faf7f0;
-  --cell-closed-border: #d4c9b3;
+  --cell-closed-bg:     #f5f0e6;
+  --cell-closed-border: #c4b89e;
   --cell-closed-text:   transparent;
   --cell-open-bg:       #1d4ed8;
   --cell-open-border:   #3b82f6;
@@ -56,18 +55,17 @@
 
   /* Drum sectors — rich saturated colors */
   --drum-points:     #1d4ed8;
-  --drum-points-alt: #16a34a;
+  --drum-points-alt: #15803d;
   --drum-points-high:#c2410c;
-  --drum-points-max: #b45309;
-  --drum-double:     #0f766e;
-  --drum-extra:      #0369a1;
+  --drum-points-max: #92400e;
+  --drum-double:     #0d6e64;
+  --drum-extra:      #075985;
   --drum-bankrupt:   #b91c1c;
-  --drum-prize:      #b45309;
-  --drum-bank:       #047857;
+  --drum-prize:      #92400e;
 
-  --scrollbar-track: rgba(0,0,0,0.06);
-  --scrollbar-thumb: rgba(0,0,0,0.18);
-  --scrollbar-thumb-hover: rgba(0,0,0,0.3);
+  --scrollbar-track: rgba(0,0,0,0.08);
+  --scrollbar-thumb: rgba(0,0,0,0.22);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.35);
 }
 
 /* ── Base styles ───────────────────────────────────────────────── */
