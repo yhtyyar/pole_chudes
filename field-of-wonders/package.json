@@ -2,6 +2,10 @@
   "name": "field-of-wonders",
   "private": true,
   "version": "1.0.0",
+  "description": "Поле Чудес — интерактивная браузерная игра для компаний и мероприятий. React + TypeScript, работает без сервера.",
+  "author": "yhtyyar",
+  "license": "MIT",
+  "homepage": "https://yhtyyar.github.io/pole_chudes/",
   "type": "module",
   "scripts": {
     "dev": "vite",
